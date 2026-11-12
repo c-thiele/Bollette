@@ -239,4 +239,85 @@ function render(){
 
 $('fm').innerHTML=MESI.map((m,i)=>'<option value="'+(i+1)+'">'+m+'</option>').join('');
 function live(){let s=0,a=false;VK.forEach(k=>{if(k==='rai'&&U==='G')return;const v=$('f_'+k).value;if(v!==''){s+=+v;a=true}});$('ftot').textContent=a?'Totale: '+eur(s):''}
-document.querySelectorAll('#app
+document.querySelectorAll('#app .fg input, #app .fg select').forEach(el=>el.addEventListener('input',live));
+$('lp').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+
+const num=id=>{const v=$(id).value;return v===''?0:r2(+v)};
+
+function clr(){
+  ['fc','f_en','f_fix','f_on','f_alt','f_iva','f_rai'].forEach(id=>$(id).value='');
+  $('fy').value=new Date().getFullYear();$('fm').value=new Date().getMonth()+1;$('fn').value='1';
+  live();msg('','');
+}
+
+function edit(y,m){
+  const b=S[U].b.find(x=>x.y==y&&x.m==m);if(!b)return;
+  $('fy').value=b.y;$('fm').value=b.m;$('fn').value=b.n;
+  const c=consPer(b);$('fc').value=c?c:'';
+  VK.forEach(k=>$('f_'+k).value=b[k]?b[k]:'');
+  live();msg('','Modifica i campi e premi "Salva bolletta".');
+  $('fy').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+async function save(){
+  const y=+$('fy').value,m=+$('fm').value,n=+$('fn').value;
+  if(!y||y<2000||y>2100){msg('err','Anno non valido.');return}
+  const rec={y,m,n,en:num('f_en'),fix:num('f_fix'),on:num('f_on'),alt:num('f_alt'),iva:num('f_iva'),rai:U==='L'?num('f_rai'):0};
+  if(!tot(rec)){msg('err','Inserisci almeno un importo.');return}
+  const cRaw=$('fc').value,u=U;
+  const ok=await commit(d=>{
+    d[u].b=d[u].b.filter(b=>!(b.y==y&&b.m==m));
+    d[u].b.push(rec);
+    if(cRaw!==''){
+      // consumo diviso in parti uguali sui mesi coperti dalla bolletta
+      const part=r2(+cRaw/n);
+      for(let k=0;k<n;k++){
+        let mm=m-k,yy=y;if(mm<1){mm+=12;yy--}
+        if(!d[u].c[yy])d[u].c[yy]=Array(12).fill(null);
+        d[u].c[yy][mm-1]=part;
+      }
+    }
+  },'Bolletta salvata.');
+  if(ok){Y=y;render();clr();msg('ok','Bolletta salvata.')}
+}
+
+async function del(y,m){
+  if(!confirm('Eliminare la bolletta '+MESI[m-1]+' '+y+'?'))return;
+  const u=U;
+  await commit(d=>{d[u].b=d[u].b.filter(b=>!(b.y==y&&b.m==m))},'Bolletta eliminata.');
+}
+
+function exportBackup(){
+  const blob=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='bollette-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+function importFile(inp){
+  const f=inp.files&&inp.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=async()=>{
+    let n;
+    try{n=normalize(JSON.parse(rd.result))}
+    catch(e){msg('err','File non valido: '+(e.message||e));inp.value='';return}
+    if((S.L.b.length||S.G.b.length)&&!confirm('Sostituire tutti i dati attuali con quelli del file?')){inp.value='';return}
+    await commit(d=>{d.L=n.L;d.G=n.G},'Backup importato.');
+    inp.value='';
+  };
+  rd.readAsText(f);
+}
+
+// Avvio
+(function init(){
+  clr();
+  const c=ls.get(KC);
+  if(c){try{S=normalize(JSON.parse(c))}catch(e){S=empty()}}
+  if(ls.get(KR)){showApp();render();refresh()}
+  else showLogin();
+})();
+</script>
+</body>
+</html>
