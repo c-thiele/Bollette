@@ -30,10 +30,16 @@ button.pr{background:var(--ac);border-color:var(--ac);color:#fff}
 .fg label{font-size:12px;color:var(--tx2);display:flex;flex-direction:column;gap:4px}
 .fg input,.fg select{width:100%}
 table{width:100%;font-size:13px;border-collapse:collapse}
-td,th{padding:6px 4px;border-bottom:1px solid var(--bd);text-align:right}
+td,th{padding:6px 4px;border-bottom:1px solid var(--bd);text-align:right;white-space:nowrap}
 th{font-weight:600;color:var(--tx2)}td:first-child,th:first-child{text-align:left}
 .ib{padding:3px 8px;font-size:12px}
 .msg{font-size:13px}
+.note{font-size:12px;color:var(--tx2);margin:4px 0 0}
+.hm td{text-align:center;border-bottom:none;border-right:1px solid var(--bg);padding:6px 2px;font-size:12px}
+.hm th{text-align:center;font-size:12px}
+.hm td:first-child,.hm th:first-child{text-align:left;padding-right:8px}
+.hm td.tt{font-weight:600;text-align:right;padding-left:8px}
+.nav button{font-weight:600}
 </style>
 </head>
 <body>
@@ -57,48 +63,118 @@ th{font-weight:600;color:var(--tx2)}td:first-child,th:first-child{text-align:lef
     <button class="pr" onclick="$('fileIn').click()">Importa file</button>
     <button onclick="commit(()=>{}, 'Archivio creato.')">Parti da zero</button>
   </div>
-  <div class="tb">
-    <button id="bL" onclick="setU('L')">Luce</button>
-    <button id="bG" onclick="setU('G')">Gas</button>
-    <select id="sY" onchange="Y=+this.value;render()"></select>
+  <div class="tb nav">
+    <button id="nD" onclick="setP('D')">Dettaglio</button>
+    <button id="nC" onclick="setP('C')">Confronto anni</button>
+    <span style="flex:1"></span>
     <button onclick="refresh()">Aggiorna</button>
   </div>
   <div id="sync" class="msg" style="color:var(--tx2);margin:-4px 0 12px"></div>
-  <div class="kp">
-    <div><div class="kl">Spesa da inizio anno</div><div class="kv" id="k1">-</div><div class="kd" id="d1"></div></div>
-    <div><div class="kl">Consumo da inizio anno</div><div class="kv" id="k2">-</div><div class="kd" id="d2"></div></div>
-    <div><div class="kl">Costo medio per unità</div><div class="kv" id="k3">-</div><div class="kd" id="d3"></div></div>
-    <div><div class="kl">Spesa media mensile</div><div class="kv" id="k4">-</div><div class="kd" id="d4"></div></div>
+
+  <!-- ============ PAGINA DETTAGLIO ============ -->
+  <div id="pD">
+    <div class="tb">
+      <button id="bL" onclick="setU('L')">Luce</button>
+      <button id="bG" onclick="setU('G')">Gas</button>
+      <select id="sY" onchange="Y=+this.value;render()"></select>
+    </div>
+    <div class="kp">
+      <div><div class="kl">Spesa da inizio anno</div><div class="kv" id="k1">-</div><div class="kd" id="d1"></div></div>
+      <div><div class="kl">Consumo da inizio anno</div><div class="kv" id="k2">-</div><div class="kd" id="d2"></div></div>
+      <div><div class="kl">Costo medio per unità</div><div class="kv" id="k3">-</div><div class="kd" id="d3"></div></div>
+      <div><div class="kl">Spesa media mensile</div><div class="kv" id="k4">-</div><div class="kd" id="d4"></div></div>
+    </div>
+    <div class="h">Consumo mensile</div>
+    <div class="lg"><span><span class="sq" style="background:#2a78d6"></span><span id="lgA"></span></span><span><span class="sq" style="background:#b4b2a9"></span><span id="lgB"></span></span></div>
+    <div style="position:relative;height:230px"><canvas id="c1"></canvas></div>
+
+    <div class="h">Consumo mensile – tutti gli anni</div>
+    <div class="tb" style="margin-bottom:4px">
+      <button id="mM" class="ib" onclick="setCM(0)">Mese per mese</button>
+      <button id="mC" class="ib" onclick="setCM(1)">Cumulato da gennaio</button>
+    </div>
+    <div class="lg" id="lg4"></div>
+    <div style="position:relative;height:260px"><canvas id="c4"></canvas></div>
+
+    <div class="h">Spesa annua per voce</div>
+    <div class="lg" id="lg2"></div>
+    <div style="position:relative;height:250px"><canvas id="c2"></canvas></div>
+    <div class="h">Costo medio per unità (escluso canone RAI)</div>
+    <div style="position:relative;height:200px"><canvas id="c3"></canvas></div>
+    <div class="h" id="hT">Bollette dell'anno</div>
+    <div style="overflow-x:auto"><table id="tab"></table></div>
+    <div class="h">Inserisci o modifica una bolletta</div>
+    <div class="fg">
+      <label>Anno<input id="fy" type="number" step="1"></label>
+      <label>Mese (fine periodo)<select id="fm"></select></label>
+      <label>Mesi coperti<select id="fn"><option value="1">1</option><option value="2">2</option></select></label>
+      <label><span id="fcl">Consumo del mese</span><input id="fc" type="number" step="1" inputmode="decimal"></label>
+      <label>Materia energia €<input id="f_en" type="number" step="0.01" inputmode="decimal"></label>
+      <label>Quote fisse e trasporto €<input id="f_fix" type="number" step="0.01" inputmode="decimal"></label>
+      <label>Oneri di sistema €<input id="f_on" type="number" step="0.01" inputmode="decimal"></label>
+      <label>Altro / ricalcoli €<input id="f_alt" type="number" step="0.01" inputmode="decimal"></label>
+      <label>Imposte e IVA €<input id="f_iva" type="number" step="0.01" inputmode="decimal"></label>
+      <label id="raiL">Canone RAI €<input id="f_rai" type="number" step="0.01" inputmode="decimal"></label>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+      <button class="pr" onclick="save()">Salva bolletta</button>
+      <button onclick="clr()">Svuota campi</button>
+      <span id="ftot" class="msg" style="color:var(--tx2)"></span>
+      <span id="msg" class="msg"></span>
+    </div>
   </div>
-  <div class="h">Consumo mensile</div>
-  <div class="lg"><span><span class="sq" style="background:#2a78d6"></span><span id="lgA"></span></span><span><span class="sq" style="background:#b4b2a9"></span><span id="lgB"></span></span></div>
-  <div style="position:relative;height:230px"><canvas id="c1"></canvas></div>
-  <div class="h">Spesa annua per voce</div>
-  <div class="lg" id="lg2"></div>
-  <div style="position:relative;height:250px"><canvas id="c2"></canvas></div>
-  <div class="h">Costo medio per unità (escluso canone RAI)</div>
-  <div style="position:relative;height:200px"><canvas id="c3"></canvas></div>
-  <div class="h" id="hT">Bollette dell'anno</div>
-  <div style="overflow-x:auto"><table id="tab"></table></div>
-  <div class="h">Inserisci o modifica una bolletta</div>
-  <div class="fg">
-    <label>Anno<input id="fy" type="number" step="1"></label>
-    <label>Mese (fine periodo)<select id="fm"></select></label>
-    <label>Mesi coperti<select id="fn"><option value="1">1</option><option value="2">2</option></select></label>
-    <label><span id="fcl">Consumo del mese</span><input id="fc" type="number" step="1" inputmode="decimal"></label>
-    <label>Materia energia €<input id="f_en" type="number" step="0.01" inputmode="decimal"></label>
-    <label>Quote fisse e trasporto €<input id="f_fix" type="number" step="0.01" inputmode="decimal"></label>
-    <label>Oneri di sistema €<input id="f_on" type="number" step="0.01" inputmode="decimal"></label>
-    <label>Altro / ricalcoli €<input id="f_alt" type="number" step="0.01" inputmode="decimal"></label>
-    <label>Imposte e IVA €<input id="f_iva" type="number" step="0.01" inputmode="decimal"></label>
-    <label id="raiL">Canone RAI €<input id="f_rai" type="number" step="0.01" inputmode="decimal"></label>
+
+  <!-- ============ PAGINA CONFRONTO ============ -->
+  <div id="pC" hidden>
+    <div class="tb" style="margin-bottom:4px">
+      <label class="msg" style="display:flex;align-items:center;gap:8px">Periodo confrontato <select id="sUp" onchange="UP=+this.value;renderC()"></select></label>
+    </div>
+    <p class="note" style="margin-bottom:12px">Per un confronto corretto con l'anno in corso, tieni lo stesso periodo per tutti gli anni.</p>
+    <div class="kp">
+      <div><div class="kl">Spesa luce + gas</div><div class="kv" id="k5">-</div><div class="kd" id="d5"></div></div>
+      <div><div class="kl">Spesa luce</div><div class="kv" id="k6">-</div><div class="kd" id="d6"></div></div>
+      <div><div class="kl">Spesa gas</div><div class="kv" id="k7">-</div><div class="kd" id="d7"></div></div>
+      <div><div class="kl">Anno più caro nel periodo</div><div class="kv" id="k8">-</div><div class="kd" id="d8" style="color:var(--tx2)"></div></div>
+    </div>
+
+    <div class="h" id="hF">Stima spesa a fine anno</div>
+    <div class="kp">
+      <div><div class="kl">Luce – stima annua</div><div class="kv" id="k9">-</div><div class="kd" id="d9"></div></div>
+      <div><div class="kl">Gas – stima annua</div><div class="kv" id="k10">-</div><div class="kd" id="d10"></div></div>
+      <div><div class="kl">Totale – stima annua</div><div class="kv" id="k11">-</div><div class="kd" id="d11"></div></div>
+    </div>
+    <p class="note" id="nF"></p>
+
+    <div class="h">Spesa luce + gas per anno</div>
+    <div class="lg" id="lg5"></div>
+    <div style="position:relative;height:250px"><canvas id="c5"></canvas></div>
+
+    <div class="h">Consumi per anno</div>
+    <div class="lg" id="lg6"></div>
+    <div style="position:relative;height:240px"><canvas id="c6"></canvas></div>
+
+    <div class="h">Costo medio per unità (escluso canone RAI)</div>
+    <div class="lg" id="lg7"></div>
+    <div style="position:relative;height:220px"><canvas id="c7"></canvas></div>
+
+    <div class="h">Spesa cumulata luce + gas, mese per mese</div>
+    <div class="lg" id="lg8"></div>
+    <div style="position:relative;height:260px"><canvas id="c8"></canvas></div>
+    <p class="note">Qui la spesa di ogni bolletta è ripartita sui mesi che copre (es. bolletta Dic–Gen: metà a dicembre, metà a gennaio). Per questo il totale di un anno può differire leggermente da quello degli altri grafici, che usano il mese di fine bolletta.</p>
+
+    <div class="h">Tabella riepilogativa</div>
+    <div style="overflow-x:auto"><table id="tabC"></table></div>
+    <div class="tb" style="margin-top:8px"><button class="ib" onclick="exportCSV()">Esporta tabella in CSV (Excel)</button></div>
+
+    <div class="h">Mappa dei consumi mensili</div>
+    <div class="tb" style="margin-bottom:4px">
+      <button id="hL" class="ib" onclick="HU='L';renderC()">Luce</button>
+      <button id="hG" class="ib" onclick="HU='G';renderC()">Gas</button>
+    </div>
+    <div style="overflow-x:auto"><table id="heat" class="hm"></table></div>
+    <p class="note">Più il colore è intenso, più alto è il consumo del mese rispetto al massimo registrato.</p>
   </div>
-  <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
-    <button class="pr" onclick="save()">Salva bolletta</button>
-    <button onclick="clr()">Svuota campi</button>
-    <span id="ftot" class="msg" style="color:var(--tx2)"></span>
-    <span id="msg" class="msg"></span>
-  </div>
+
   <div class="h">Backup e account</div>
   <div class="tb">
     <button onclick="exportBackup()">Esporta backup</button>
@@ -116,8 +192,11 @@ const MESI=['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','D
 const VK=['en','fix','on','alt','iva','rai'];
 const VN={en:'Materia energia',fix:'Quote fisse e trasporto',on:'Oneri di sistema',alt:'Altro / ricalcoli',iva:'Imposte e IVA',rai:'Canone RAI'};
 const VC={en:'#2a78d6',fix:'#eb6834',on:'#1baf7a',alt:'#eda100',iva:'#e87ba4',rai:'#6250d6'};
+const PAL=['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#6250d6','#0e9aa7','#898781'];
+const CL='#eda100',CG='#2a78d6'; // colori luce / gas nella pagina confronto
 const empty=()=>({L:{b:[],c:{}},G:{b:[],c:{}}});
 let S=empty(),U='L',Y=new Date().getFullYear(),ch={},st=null,busy=false;
+let P='D',CM=0,UP=0,HU='L';
 const $=id=>document.getElementById(id);
 const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
 const r2=v=>Math.round(v*100)/100;
@@ -126,7 +205,7 @@ const eur=v=>fe.format(r2(v));
 const nf=(v,d)=>Number(v).toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d});
 const hhmm=()=>new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
 const tot=b=>r2(VK.reduce((s,k)=>s+(+b[k]||0),0));
-const un=()=>U==='L'?'kWh':'Smc';
+const un=(u=U)=>u==='L'?'kWh':'Smc';
 const dark=matchMedia('(prefers-color-scheme: dark)').matches;
 const ink=dark?'#b4b2a9':'#898781',grid=dark?'#2c2c2a':'#e1e0d9',surf=dark?'#1f1f1e':'#ffffff';
 function status(t){$('sync').textContent=t}
@@ -196,19 +275,33 @@ async function refresh(){
 }
 function logout(){if(!confirm('Uscire? Credenziali e copia locale verranno rimosse da questo dispositivo.'))return;ls.del(KR);ls.del(KC);st=null;S=empty();showLogin()}
 
+// ---------- calcoli (u = 'L' o 'G', di default l'utenza selezionata) ----------
 function years(){const s=new Set();['L','G'].forEach(u=>{S[u].b.forEach(b=>s.add(b.y));Object.keys(S[u].c).forEach(y=>{if((S[u].c[y]||[]).some(v=>v!=null))s.add(+y)})});return [...s].sort((a,b)=>a-b)}
-function cv(y,m){const a=S[U].c[y]||[];const v=a[m-1];return v==null||v===''?null:+v}
-function lastM(y){let l=0;for(let m=1;m<=12;m++)if(cv(y,m)!=null)l=m;S[U].b.forEach(b=>{if(b.y==y&&b.m>l)l=b.m});return l}
-function spesa(y,up){return S[U].b.filter(b=>b.y==y&&b.m<=up).reduce((s,b)=>s+tot(b),0)}
-function cSum(y,up){let s=0;for(let m=1;m<=up;m++)s+=cv(y,m)||0;return s}
-function consPer(b){let s=0;for(let k=0;k<b.n;k++){let mm=b.m-k,yy=b.y;if(mm<1){mm+=12;yy--}s+=cv(yy,mm)||0}return s}
-function unitCost(y){const bs=S[U].b.filter(b=>b.y==y);const c=bs.reduce((s,b)=>s+consPer(b),0);const e=bs.reduce((s,b)=>s+tot(b)-b.rai,0);return c>0?e/c:null}
+function billYears(){return years().filter(y=>S.L.b.some(b=>b.y==y)||S.G.b.some(b=>b.y==y))}
+function cv(y,m,u=U){const a=S[u].c[y]||[];const v=a[m-1];return v==null||v===''?null:+v}
+function lastM(y,u=U){let l=0;for(let m=1;m<=12;m++)if(cv(y,m,u)!=null)l=m;S[u].b.forEach(b=>{if(b.y==y&&b.m>l)l=b.m});return l}
+function spesa(y,up,u=U){return S[u].b.filter(b=>b.y==y&&b.m<=up).reduce((s,b)=>s+tot(b),0)}
+function cSum(y,up,u=U){let s=0;for(let m=1;m<=up;m++)s+=cv(y,m,u)||0;return s}
+function consPer(b,u=U){let s=0;for(let k=0;k<b.n;k++){let mm=b.m-k,yy=b.y;if(mm<1){mm+=12;yy--}s+=cv(yy,mm,u)||0}return s}
+function unitCost(y,u=U,up=12){const bs=S[u].b.filter(b=>b.y==y&&b.m<=up);const c=bs.reduce((s,b)=>s+consPer(b,u),0);const e=bs.reduce((s,b)=>s+tot(b)-b.rai,0);return c>0?e/c:null}
+// spesa ripartita sui mesi di competenza
+function spM(y,u){const a=Array(12).fill(0);S[u].b.forEach(b=>{const t=tot(b)/b.n;for(let k=0;k<b.n;k++){let mm=b.m-k,yy=b.y;if(mm<1){mm+=12;yy--}if(yy==y)a[mm-1]+=t}});return a}
+function ycol(y,list){const i=list.length-1-list.indexOf(y);return PAL[i%PAL.length]}
+function lgHTML(items){return items.map(([c,l])=>'<span><span class="sq" style="background:'+c+'"></span>'+l+'</span>').join('')}
 function delta(el,cur,prev,lbl){if(prev==null||!prev){el.textContent='';return}const p=(cur-prev)/Math.abs(prev)*100;el.style.color=p>0?'var(--ko)':'var(--ok)';el.textContent=(p>0?'+':'')+nf(p,1)+'% '+lbl}
+function dtxt(cur,prev){if(cur==null||prev==null||!prev||!cur)return '';const p=(cur-prev)/Math.abs(prev)*100;return '<span style="color:var(--'+(p>0?'ko':'ok')+')">'+(p>0?'+':'')+nf(p,1)+'%</span>'}
 const base={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:ink,autoSkip:false,maxRotation:45},grid:{display:false}},y:{ticks:{color:ink},grid:{color:grid}}}};
 function draw(id,cfg){if(ch[id])ch[id].destroy();ch[id]=new Chart($(id),cfg)}
 function setU(u){U=u;render()}
-
+function setCM(v){CM=v;render()}
+function setP(p){P=p;$('pD').hidden=p!=='D';$('pC').hidden=p!=='C';render();window.scrollTo({top:0})}
 function render(){
+  $('nD').className=P==='D'?'on':'';$('nC').className=P==='C'?'on':'';
+  if(P==='C')renderC();else renderD();
+}
+
+// ---------- PAGINA DETTAGLIO ----------
+function renderD(){
   ['L','G'].forEach(u=>$('b'+u).className=U===u?'on':'');
   const ys=years();if(ys.length&&!ys.includes(Y))Y=ys[ys.length-1];
   $('sY').innerHTML=ys.map(y=>'<option'+(y==Y?' selected':'')+'>'+y+'</option>').join('');
@@ -221,6 +314,16 @@ function render(){
   $('k4').textContent=lm?eur(sp/lm):'-';$('d4').textContent=U==='L'?'canone RAI incluso':'';$('d4').style.color='var(--tx2)';
   $('lgA').textContent=Y+': '+nf(cSum(Y,12),0)+' '+un();$('lgB').textContent=(Y-1)+': '+nf(cSum(Y-1,12),0)+' '+un();
   draw('c1',{type:'bar',data:{labels:MESI,datasets:[{label:String(Y),data:MESI.map((_,i)=>cv(Y,i+1)),backgroundColor:'#2a78d6',borderRadius:4,maxBarThickness:18},{label:String(Y-1),data:MESI.map((_,i)=>cv(Y-1,i+1)),backgroundColor:'#b4b2a9',borderRadius:4,maxBarThickness:18}]},options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:x=>x.dataset.label+': '+nf(x.raw||0,0)+' '+un()}}}}});
+
+  // consumo mensile tutti gli anni
+  $('mM').className='ib'+(CM?'':' on');$('mC').className='ib'+(CM?' on':'');
+  const yc=ys.filter(y=>cSum(y,12)>0);
+  $('lg4').innerHTML=lgHTML(yc.map(y=>[ycol(y,yc),y+(y==Y?' (selezionato)':'')]));
+  draw('c4',{type:'line',data:{labels:MESI,datasets:yc.map(y=>{const l=lastM(y);let run=0;const col=ycol(y,yc);
+    const data=MESI.map((_,i)=>{const v=cv(y,i+1);if(CM){if(i+1>l)return null;run+=v||0;return r2(run)}return v});
+    return {label:String(y),data,borderColor:col,backgroundColor:col,borderWidth:y==Y?3:1.5,pointRadius:y==Y?3:0,pointHoverRadius:4,tension:.25,order:y==Y?0:1}})},
+    options:{...base,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{filter:x=>x.raw!=null,itemSort:(a,b)=>(b.raw||0)-(a.raw||0),callbacks:{label:x=>x.dataset.label+': '+nf(x.raw,0)+' '+un()}}},scales:{x:{ticks:{color:ink},grid:{display:false}},y:{ticks:{color:ink,callback:v=>nf(v,0)},grid:{color:grid}}}}});
+
   const yb=ys.filter(y=>S[U].b.some(b=>b.y==y)),vk=U==='L'?VK:VK.slice(0,5);
   $('lg2').innerHTML=vk.map(k=>'<span><span class="sq" style="background:'+VC[k]+'"></span>'+VN[k]+'</span>').join('');
   draw('c2',{type:'bar',data:{labels:yb.map(String),datasets:vk.map(k=>({label:VN[k],data:yb.map(y=>r2(S[U].b.filter(b=>b.y==y).reduce((s,b)=>s+(+b[k]||0),0))),backgroundColor:VC[k],borderColor:surf,borderWidth:1,maxBarThickness:24}))},options:{...base,scales:{x:{stacked:true,ticks:{color:ink},grid:{display:false}},y:{stacked:true,ticks:{color:ink,callback:v=>nf(v,0)+' €'},grid:{color:grid}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:x=>x.dataset.label+': '+eur(x.raw),footer:it=>'Totale: '+eur(it.reduce((s,x)=>s+x.raw,0))}}}}});
@@ -237,6 +340,152 @@ function render(){
   if(!$('fy').value)$('fy').value=new Date().getFullYear();live();
 }
 
+// ---------- PAGINA CONFRONTO ----------
+function autoUp(){const yb=billYears();if(!yb.length)return 12;const ly=yb[yb.length-1];return Math.max(lastM(ly,'L'),lastM(ly,'G'))||12}
+function curUp(){return UP||autoUp()}
+const pl=up=>up==12?'anno intero':'Gen–'+MESI[up-1];
+function compData(up){return billYears().map(y=>{const sL=spesa(y,up,'L'),sG=spesa(y,up,'G');
+  return {y,cL:cSum(y,up,'L'),cG:cSum(y,up,'G'),sL,sG,t:sL+sG,uL:unitCost(y,'L',up),uG:unitCost(y,'G',up)}})}
+
+// ---------- STIMA FINE ANNO ----------
+function forecast(u){
+  const yb=billYears();if(!yb.length)return null;
+  const LY=yb[yb.length-1];
+  const lb=S[u].b.filter(b=>b.y==LY).reduce((m,b)=>Math.max(m,b.m),0); // ultimo mese fatturato
+  const act=spesa(LY,12,u),mon=Array(12).fill(0),b0={u,y:LY,lb,act,mon};
+  if(lb>=12)return {...b0,est:act,lo:act,hi:act,done:true};
+  const rem=[];for(let m=lb+1;m<=12;m++)rem.push(m);
+  // anni di riferimento: ultimi 3 con tutti i mesi mancanti registrati
+  const refs=years().filter(y=>y<LY&&rem.every(m=>cv(y,m,u)!=null)).slice(-3);
+  let uc=unitCost(LY,u),ucY=LY;
+  if(uc==null&&refs.length){ucY=refs[refs.length-1];uc=unitCost(ucY,u)}
+  if(!refs.length||uc==null)return {...b0,none:true};
+  const avg=m=>refs.reduce((s,y)=>s+cv(y,m,u),0)/refs.length;
+  const rai=u==='L'?refs.reduce((s,y)=>s+S.L.b.filter(b=>b.y==y&&b.m>lb).reduce((a,b)=>a+(+b.rai||0),0),0)/refs.length:0;
+  rem.forEach(m=>mon[m-1]=avg(m)*uc+rai/rem.length);
+  const tc=refs.map(y=>rem.reduce((s,m)=>s+cv(y,m,u),0));
+  return {...b0,refs,uc,ucY,rai,remC:tc.reduce((a,b)=>a+b,0)/tc.length,
+    est:act+mon.reduce((a,b)=>a+b,0),lo:act+Math.min(...tc)*uc+rai,hi:act+Math.max(...tc)*uc+rai};
+}
+const fOk=f=>f&&!f.none;
+
+function renderC(){
+  const a=autoUp(),up=curUp();
+  let o='<option value="0"'+(UP==0?' selected':'')+'>Come anno in corso ('+pl(a)+')</option><option value="12"'+(UP==12?' selected':'')+'>Anno intero</option>';
+  for(let m=1;m<=11;m++)o+='<option value="'+m+'"'+(UP==m?' selected':'')+'>Gen–'+MESI[m-1]+'</option>';
+  $('sUp').innerHTML=o;
+  const D=compData(up),yl=D.map(d=>d.y),last=D[D.length-1],prev=D.length>1?D[D.length-2]:null;
+  const per=' ('+pl(up)+')';
+
+  // indicatori
+  if(last){
+    const vs=prev&&prev.y==last.y-1?prev:null;
+    $('k5').textContent=eur(last.t);$('d5').innerHTML=last.y+per+(vs?' · '+dtxt(last.t,vs.t)+' vs '+vs.y:'');
+    $('k6').textContent=eur(last.sL);$('d6').innerHTML=last.y+(vs?' · '+dtxt(last.sL,vs.sL)+' vs '+vs.y:'');
+    $('k7').textContent=eur(last.sG);$('d7').innerHTML=last.y+(vs?' · '+dtxt(last.sG,vs.sG)+' vs '+vs.y:'');
+    const mx=D.reduce((m,d)=>d.t>m.t?d:m,D[0]);
+    $('k8').textContent=mx.y;$('d8').textContent=eur(mx.t)+per;
+  }else{['k5','k6','k7','k8'].forEach(k=>$(k).textContent='-');['d5','d6','d7','d8'].forEach(k=>$(k).textContent='')}
+
+  // stima fine anno
+  const fL=forecast('L'),fG=forecast('G');
+  const fk=(k,d,f,pt)=>{
+    if(!f){$(k).textContent='-';$(d).textContent='';return}
+    if(f.none){$(k).textContent='-';$(d).textContent='dati insufficienti per la stima';$(d).style.color='var(--tx2)';return}
+    $(k).textContent=eur(f.est);$(d).style.color='var(--tx2)';
+    $(d).innerHTML=(f.done?'anno completo':'forbice '+eur(f.lo)+' – '+eur(f.hi))+(pt?' · '+dtxt(f.est,pt)+' vs '+(f.y-1):'');
+  };
+  const ly=last?last.y:null;
+  $('hF').textContent='Stima spesa a fine '+(ly||'anno');
+  fk('k9','d9',fL,ly?spesa(ly-1,12,'L'):0);
+  fk('k10','d10',fG,ly?spesa(ly-1,12,'G'):0);
+  if(fOk(fL)&&fOk(fG))fk('k11','d11',{y:fL.y,est:fL.est+fG.est,lo:fL.lo+fG.lo,hi:fL.hi+fG.hi,done:fL.done&&fG.done},ly?spesa(ly-1,12,'L')+spesa(ly-1,12,'G'):0);
+  else fk('k11','d11',fL||fG?{none:true}:null,0);
+  const nt=(f,n)=>{
+    if(!f||f.none||f.done)return '';
+    return '<b>'+n+'</b>: '+(f.lb?'già fatturati '+eur(f.act)+' fino a '+MESI[f.lb-1]:'nessuna bolletta ancora')+'; '
+      +MESI[f.lb]+'–Dic stimati su consumi medi '+f.refs.join(', ')+' ('+nf(f.remC,0)+' '+un(f.u)+') × '+nf(f.uc,3)+' €/'+un(f.u)
+      +' (costo medio '+f.ucY+')'+(f.rai>0?' + canone RAI '+eur(f.rai):'')+'.<br>';
+  };
+  const nTxt=nt(fL,'Luce')+nt(fG,'Gas');
+  $('nF').innerHTML=nTxt?nTxt+'La forbice usa l\'anno di riferimento con consumi più bassi e quello con consumi più alti. Non considera variazioni di prezzo future né conguagli.':'';
+
+  // spesa per anno (+ stima se anno intero)
+  const showF=up==12;
+  const stD=(f,c,l)=>({label:l,st:true,data:yl.map(y=>fOk(f)&&!f.done&&y==f.y?r2(f.est-f.act):null),backgroundColor:c+'59',borderColor:surf,borderWidth:1,maxBarThickness:30});
+  const ds5=[
+    {label:'Luce',data:D.map(d=>r2(d.sL)),backgroundColor:CL,borderColor:surf,borderWidth:1,maxBarThickness:30},
+    {label:'Gas',data:D.map(d=>r2(d.sG)),backgroundColor:CG,borderColor:surf,borderWidth:1,maxBarThickness:30}];
+  const lg5=[[CL,'Luce'],[CG,'Gas']];
+  if(showF){ds5.push(stD(fL,CL,'Luce (stima)'),stD(fG,CG,'Gas (stima)'));lg5.push([CL+'59','Luce stimata'],[CG+'59','Gas stimato'])}
+  $('lg5').innerHTML=lgHTML(lg5);
+  draw('c5',{type:'bar',data:{labels:yl.map(String),datasets:ds5},
+    options:{...base,scales:{x:{stacked:true,ticks:{color:ink},grid:{display:false}},y:{stacked:true,ticks:{color:ink,callback:v=>nf(v,0)+' €'},grid:{color:grid}}},
+    plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,filter:x=>x.raw!=null,callbacks:{label:x=>x.dataset.label+': '+eur(x.raw),footer:it=>'Totale'+(it.some(x=>x.dataset.st)?' con stima':'')+': '+eur(it.reduce((s,x)=>s+(x.raw||0),0))}}}}});
+
+  // consumi per anno (doppio asse)
+  const dual=(tl,tr,dec)=>({x:{ticks:{color:ink},grid:{display:false}},
+    y:{position:'left',ticks:{color:ink,callback:v=>nf(v,dec)},grid:{color:grid},title:{display:true,text:tl,color:ink}},
+    y1:{position:'right',ticks:{color:ink,callback:v=>nf(v,dec)},grid:{display:false},title:{display:true,text:tr,color:ink}}});
+  $('lg6').innerHTML=lgHTML([[CL,'Luce (kWh, asse sinistro)'],[CG,'Gas (Smc, asse destro)']]);
+  draw('c6',{type:'bar',data:{labels:yl.map(String),datasets:[
+    {label:'Luce',data:D.map(d=>d.cL||null),backgroundColor:CL,yAxisID:'y',borderRadius:4,maxBarThickness:22},
+    {label:'Gas',data:D.map(d=>d.cG||null),backgroundColor:CG,yAxisID:'y1',borderRadius:4,maxBarThickness:22}]},
+    options:{...base,scales:dual('kWh','Smc',0),plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:x=>x.dataset.label+': '+nf(x.raw||0,0)+' '+(x.dataset.yAxisID==='y'?'kWh':'Smc')}}}}});
+
+  // costo unitario
+  $('lg7').innerHTML=lgHTML([[CL,'€/kWh (asse sinistro)'],[CG,'€/Smc (asse destro)']]);
+  const ln=(l,c,ax,k)=>({label:l,data:D.map(d=>d[k]!=null?r2(d[k]*1000)/1000:null),borderColor:c,backgroundColor:c,yAxisID:ax,borderWidth:2,pointRadius:4,pointBorderColor:surf,pointBorderWidth:2,tension:.2,spanGaps:true});
+  draw('c7',{type:'line',data:{labels:yl.map(String),datasets:[ln('Luce',CL,'y','uL'),ln('Gas',CG,'y1','uG')]},
+    options:{...base,scales:dual('€/kWh','€/Smc',2),plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:x=>x.dataset.label+': '+nf(x.raw,3)+(x.dataset.yAxisID==='y'?' €/kWh':' €/Smc')}}}}});
+
+  // spesa cumulata (+ proiezione tratteggiata)
+  const ds8=yl.map(y=>{const l=Math.max(lastM(y,'L'),lastM(y,'G'));const aL=spM(y,'L'),aG=spM(y,'G');let run=0;const col=ycol(y,yl);
+    return {label:String(y),data:MESI.map((_,i)=>{if(i+1>l)return null;run+=aL[i]+aG[i];return r2(run)}),borderColor:col,backgroundColor:col,borderWidth:y==ly?3:1.5,pointRadius:y==ly?3:0,pointHoverRadius:4,tension:.2,order:y==ly?0:1}});
+  const lg8=yl.map(y=>[ycol(y,yl),String(y)]);
+  if(fOk(fL)&&fOk(fG)&&!(fL.done&&fG.done)){
+    const aL=spM(ly,'L'),aG=spM(ly,'G'),m0=Math.max(Math.min(fL.lb,fG.lb),1);let run=0;
+    const data=MESI.map((_,i)=>{const m=i+1;run+=(m<=fL.lb?aL[i]:fL.mon[i])+(m<=fG.lb?aG[i]:fG.mon[i]);return m>=m0?r2(run):null});
+    ds8.push({label:'Stima '+ly,data,borderColor:ycol(ly,yl),backgroundColor:ycol(ly,yl),borderDash:[6,4],borderWidth:2,pointRadius:0,pointHoverRadius:3,tension:.2,order:2});
+    lg8.push([ycol(ly,yl),'Stima '+ly+' (tratteggio)']);
+  }
+  $('lg8').innerHTML=lgHTML(lg8);
+  draw('c8',{type:'line',data:{labels:MESI,datasets:ds8},
+    options:{...base,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{filter:x=>x.raw!=null,itemSort:(a,b)=>(b.raw||0)-(a.raw||0),callbacks:{label:x=>x.dataset.label+': '+eur(x.raw)}}},scales:{x:{ticks:{color:ink},grid:{display:false}},y:{ticks:{color:ink,callback:v=>nf(v,0)+' €'},grid:{color:grid}}}}});
+
+  // tabella
+  let h='<tr><th>Anno</th><th>Luce kWh</th><th>Δ</th><th>Gas Smc</th><th>Δ</th><th>Spesa luce</th><th>Spesa gas</th><th>Totale</th><th>Δ</th><th>€/kWh</th><th>€/Smc</th></tr>';
+  D.forEach((d,i)=>{const p=i&&D[i-1].y==d.y-1?D[i-1]:null;
+    h+='<tr><td><b>'+d.y+'</b></td><td>'+(d.cL?nf(d.cL,0):'-')+'</td><td>'+(p?dtxt(d.cL,p.cL):'')+'</td><td>'+(d.cG?nf(d.cG,0):'-')+'</td><td>'+(p?dtxt(d.cG,p.cG):'')+'</td><td>'+eur(d.sL)+'</td><td>'+eur(d.sG)+'</td><td><b>'+eur(d.t)+'</b></td><td>'+(p?dtxt(d.t,p.t):'')+'</td><td>'+(d.uL!=null?nf(d.uL,3):'-')+'</td><td>'+(d.uG!=null?nf(d.uG,3):'-')+'</td></tr>'});
+  $('tabC').innerHTML=D.length?h:'<tr><td style="color:var(--tx2)">Nessuna bolletta registrata.</td></tr>';
+
+  // mappa consumi
+  $('hL').className='ib'+(HU==='L'?' on':'');$('hG').className='ib'+(HU==='G'?' on':'');
+  const yh=years().filter(y=>cSum(y,12,HU)>0);let mx=0;
+  yh.forEach(y=>{for(let m=1;m<=12;m++)mx=Math.max(mx,cv(y,m,HU)||0)});
+  const rgb=HU==='L'?'237,161,0':'42,120,214';
+  let t='<tr><th>'+un(HU)+'</th>'+MESI.map(m=>'<th>'+m+'</th>').join('')+'<th style="text-align:right">Totale</th></tr>';
+  yh.slice().reverse().forEach(y=>{t+='<tr><td><b>'+y+'</b></td>';
+    for(let m=1;m<=12;m++){const v=cv(y,m,HU);
+      if(v==null){t+='<td style="color:var(--tx2)">·</td>';continue}
+      const al=mx?0.1+0.8*v/mx:0.1;
+      t+='<td style="background:rgba('+rgb+','+al.toFixed(2)+');'+(al>0.55?'color:#fff':'')+'">'+nf(v,0)+'</td>'}
+    t+='<td class="tt">'+nf(cSum(y,12,HU),0)+'</td></tr>'});
+  $('heat').innerHTML=yh.length?t:'<tr><td style="color:var(--tx2)">Nessun consumo registrato.</td></tr>';
+}
+
+function exportCSV(){
+  const up=curUp(),D=compData(up);
+  const f=(v,d)=>v==null||v===''?'':Number(v).toFixed(d).replace('.',',');
+  const L=[['Anno','Periodo','Luce kWh','Gas Smc','Spesa luce €','Spesa gas €','Totale €','€/kWh','€/Smc'].join(';')];
+  D.forEach(d=>L.push([d.y,pl(up),f(d.cL,0),f(d.cG,0),f(d.sL,2),f(d.sG,2),f(d.t,2),f(d.uL,4),f(d.uG,4)].join(';')));
+  const blob=new Blob(['\ufeff'+L.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='confronto-bollette-'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+// ---------- form ----------
 $('fm').innerHTML=MESI.map((m,i)=>'<option value="'+(i+1)+'">'+m+'</option>').join('');
 function live(){let s=0,a=false;VK.forEach(k=>{if(k==='rai'&&U==='G')return;const v=$('f_'+k).value;if(v!==''){s+=+v;a=true}});$('ftot').textContent=a?'Totale: '+eur(s):''}
 document.querySelectorAll('#app .fg input, #app .fg select').forEach(el=>el.addEventListener('input',live));
