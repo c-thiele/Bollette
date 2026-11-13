@@ -4,13 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="robots" content="noindex">
 <title>Bollette casa</title>
- <link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#2a78d6">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-title" content="Bollette">
-<meta name="apple-mobile-web-app-status-bar-style" content="default"> 
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 :root{--bg:#f7f7f5;--card:#fff;--soft:#efeeea;--tx:#1b1b1a;--tx2:#5f5e5a;--bd:#dddcd5;--ac:#2a78d6;--ok:#2f7d32;--ko:#c62828}
 @media (prefers-color-scheme:dark){:root{--bg:#141413;--card:#1f1f1e;--soft:#2a2a28;--tx:#f0efec;--tx2:#b4b2a9;--bd:#3a3a37;--ac:#3987e5;--ok:#66bb6a;--ko:#ef5350}}
@@ -86,6 +87,7 @@ th{font-weight:600;color:var(--tx2)}td:first-child,th:first-child{text-align:lef
     <div class="tb">
       <button id="bL" onclick="setU('L')">Luce</button>
       <button id="bG" onclick="setU('G')">Gas</button>
+      <button id="bA" onclick="setU('A')">Acqua</button>
       <select id="sY" onchange="Y=+this.value;render()"></select>
     </div>
     <div class="kp">
@@ -118,15 +120,16 @@ th{font-weight:600;color:var(--tx2)}td:first-child,th:first-child{text-align:lef
     <div class="fg">
       <label>Anno<input id="fy" type="number" step="1"></label>
       <label>Mese (fine periodo)<select id="fm"></select></label>
-      <label>Mesi coperti<select id="fn"><option value="1">1</option><option value="2">2</option></select></label>
-      <label><span id="fcl">Consumo del mese</span><input id="fc" type="number" step="1" inputmode="decimal"></label>
-      <label>Materia energia €<input id="f_en" type="number" step="0.01" inputmode="decimal"></label>
-      <label>Quote fisse e trasporto €<input id="f_fix" type="number" step="0.01" inputmode="decimal"></label>
-      <label>Oneri di sistema €<input id="f_on" type="number" step="0.01" inputmode="decimal"></label>
-      <label>Altro / ricalcoli €<input id="f_alt" type="number" step="0.01" inputmode="decimal"></label>
-      <label>Imposte e IVA €<input id="f_iva" type="number" step="0.01" inputmode="decimal"></label>
+      <label>Mesi coperti<select id="fn"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="6">6</option></select></label>
+      <label><span id="fcl">Consumo della bolletta</span><input id="fc" type="number" step="1" inputmode="decimal"></label>
+      <label><span><span id="t_en">Materia energia</span> €</span><input id="f_en" type="number" step="0.01" inputmode="decimal"></label>
+      <label><span><span id="t_fix">Quote fisse e trasporto</span> €</span><input id="f_fix" type="number" step="0.01" inputmode="decimal"></label>
+      <label><span><span id="t_on">Oneri di sistema</span> €</span><input id="f_on" type="number" step="0.01" inputmode="decimal"></label>
+      <label><span><span id="t_alt">Altro / ricalcoli</span> €</span><input id="f_alt" type="number" step="0.01" inputmode="decimal"></label>
+      <label><span><span id="t_iva">Imposte e IVA</span> €</span><input id="f_iva" type="number" step="0.01" inputmode="decimal"></label>
       <label id="raiL">Canone RAI €<input id="f_rai" type="number" step="0.01" inputmode="decimal"></label>
     </div>
+    <p class="note" id="nA" hidden>Acqua: inserisci i m³ fatturati nel periodo (anche se stimati, in acconto). Se la bolletta contiene un conguaglio, il suo importo va in «Perequazione, altro e conguagli». I m³ vengono divisi in parti uguali sui mesi coperti.</p>
     <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
       <button class="pr" onclick="save()">Salva bolletta</button>
       <button onclick="clr()">Svuota campi</button>
@@ -143,47 +146,32 @@ th{font-weight:600;color:var(--tx2)}td:first-child,th:first-child{text-align:lef
     <p class="note" style="margin-bottom:10px">Per un confronto corretto con l'anno in corso, tieni lo stesso periodo per tutti gli anni.</p>
     <div class="yc" id="yrsC"></div>
 
-    <div class="kp" style="margin-top:8px">
-      <div><div class="kl">Spesa luce + gas</div><div class="kv" id="k5">-</div><div class="kd" id="d5"></div></div>
-      <div><div class="kl">Spesa luce</div><div class="kv" id="k6">-</div><div class="kd" id="d6"></div></div>
-      <div><div class="kl">Spesa gas</div><div class="kv" id="k7">-</div><div class="kd" id="d7"></div></div>
-      <div><div class="kl">Anno più caro (tra i selezionati)</div><div class="kv" id="k8">-</div><div class="kd" id="d8" style="color:var(--tx2)"></div></div>
-    </div>
+    <div class="kp" id="kpC" style="margin-top:8px"></div>
 
     <div class="h" id="hF">Stima spesa a fine anno</div>
-    <div class="kp">
-      <div><div class="kl">Luce – stima annua</div><div class="kv" id="k9">-</div><div class="kd" id="d9"></div></div>
-      <div><div class="kl">Gas – stima annua</div><div class="kv" id="k10">-</div><div class="kd" id="d10"></div></div>
-      <div><div class="kl">Totale – stima annua</div><div class="kv" id="k11">-</div><div class="kd" id="d11"></div></div>
-    </div>
+    <div class="kp" id="kpF"></div>
     <p class="note" id="nF"></p>
 
-    <div class="h">Spesa luce + gas per anno</div>
+    <div class="h">Spesa per anno</div>
     <div class="lg" id="lg5"></div>
     <div style="position:relative;height:250px"><canvas id="c5"></canvas></div>
 
-    <div class="h">Consumi per anno</div>
-    <div class="lg" id="lg6"></div>
-    <div style="position:relative;height:240px"><canvas id="c6"></canvas></div>
-
-    <div class="h">Costo medio per unità (escluso canone RAI)</div>
-    <div class="lg" id="lg7"></div>
-    <div style="position:relative;height:220px"><canvas id="c7"></canvas></div>
-
-    <div class="h">Spesa cumulata luce + gas, mese per mese</div>
+    <div class="h">Spesa cumulata (tutte le utenze), mese per mese</div>
     <div class="lg" id="lg8"></div>
     <div style="position:relative;height:260px"><canvas id="c8"></canvas></div>
-    <p class="note">Qui la spesa di ogni bolletta è ripartita sui mesi che copre (es. bolletta Dic–Gen: metà a dicembre, metà a gennaio). Per questo il totale di un anno può differire leggermente da quello degli altri grafici, che usano il mese di fine bolletta.</p>
+    <p class="note">Qui la spesa di ogni bolletta è ripartita sui mesi che copre (es. bolletta trimestrale Lug–Set: un terzo per mese). Per questo il totale di un anno può differire leggermente da quello degli altri grafici, che usano il mese di fine bolletta.</p>
 
     <div class="h">Tabella riepilogativa</div>
     <div style="overflow-x:auto"><table id="tabC"></table></div>
     <div class="tb" style="margin-top:8px"><button class="ib" onclick="exportCSV()">Esporta tabella in CSV (Excel)</button></div>
 
-    <div class="h">Mappa dei consumi mensili</div>
-    <div class="tb" style="margin-bottom:4px">
-      <button id="hL" class="ib" onclick="HU='L';renderC()">Luce</button>
-      <button id="hG" class="ib" onclick="HU='G';renderC()">Gas</button>
-    </div>
+    <div class="h">Dettaglio per utenza</div>
+    <div class="tb" id="hUs" style="margin-bottom:4px"></div>
+    <div class="h" id="h6" style="margin-top:8px">Consumi per anno</div>
+    <div style="position:relative;height:240px"><canvas id="c6"></canvas></div>
+    <div class="h" id="h7">Costo medio per unità</div>
+    <div style="position:relative;height:220px"><canvas id="c7"></canvas></div>
+    <div class="h" id="h9">Mappa dei consumi mensili</div>
     <div style="overflow-x:auto"><table id="heat" class="hm"></table></div>
     <p class="note">Più il colore è intenso, più alto è il consumo del mese rispetto al massimo degli anni selezionati.</p>
   </div>
@@ -202,12 +190,18 @@ th{font-weight:600;color:var(--tx2)}td:first-child,th:first-child{text-align:lef
 <script>
 const FN='bollette.json',KC='bollette_cache',KR='bollette_cred',KX='bollette_anni_off';
 const MESI=['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+const UTZ=['L','G','A'];
+const UN={L:'Luce',G:'Gas',A:'Acqua'};
+const UC={L:'#eda100',G:'#2a78d6',A:'#0e9aa7'};
+const UNIT={L:'kWh',G:'Smc',A:'m³'};
 const VK=['en','fix','on','alt','iva','rai'];
-const VN={en:'Materia energia',fix:'Quote fisse e trasporto',on:'Oneri di sistema',alt:'Altro / ricalcoli',iva:'Imposte e IVA',rai:'Canone RAI'};
+const VNX={
+  L:{en:'Materia energia',fix:'Quote fisse e trasporto',on:'Oneri di sistema',alt:'Altro / ricalcoli',iva:'Imposte e IVA',rai:'Canone RAI'},
+  G:{en:'Materia energia',fix:'Quote fisse e trasporto',on:'Oneri di sistema',alt:'Altro / ricalcoli',iva:'Imposte e IVA',rai:'Canone RAI'},
+  A:{en:'Acquedotto (quota variabile)',fix:'Quote fisse',on:'Fognatura e depurazione',alt:'Perequazione, altro e conguagli',iva:'IVA',rai:'Canone RAI'}};
 const VC={en:'#2a78d6',fix:'#eb6834',on:'#1baf7a',alt:'#eda100',iva:'#e87ba4',rai:'#6250d6'};
 const PAL=['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#6250d6','#0e9aa7','#898781'];
-const CL='#eda100',CG='#2a78d6'; // colori luce / gas nella pagina confronto
-const empty=()=>({L:{b:[],c:{}},G:{b:[],c:{}}});
+const empty=()=>({L:{b:[],c:{}},G:{b:[],c:{}},A:{b:[],c:{}}});
 let S=empty(),U='L',Y=new Date().getFullYear(),ch={},st=null,busy=false;
 let P='D',CM=0,UP=0,HU='L';
 const $=id=>document.getElementById(id);
@@ -219,7 +213,9 @@ const eur=v=>fe.format(r2(v));
 const nf=(v,d)=>Number(v).toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d});
 const hhmm=()=>new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
 const tot=b=>r2(VK.reduce((s,k)=>s+(+b[k]||0),0));
-const un=(u=U)=>u==='L'?'kWh':'Smc';
+const un=(u=U)=>UNIT[u];
+const lc=u=>UN[u].toLowerCase();
+const rgbOf=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)).join(',');
 const dark=matchMedia('(prefers-color-scheme: dark)').matches;
 const ink=dark?'#b4b2a9':'#898781',grid=dark?'#2c2c2a':'#e1e0d9',surf=dark?'#1f1f1e':'#ffffff';
 function status(t){$('sync').textContent=t}
@@ -229,9 +225,10 @@ function cache(){ls.set(KC,JSON.stringify(S))}
 function normalize(d){
   if(!d||!d.L||!d.G)throw new Error('Formato non riconosciuto');
   const o=empty();
-  ['L','G'].forEach(u=>{
-    o[u].b=(d[u].b||[]).map(r=>Array.isArray(r)?{y:r[0],m:r[1],n:r[2],en:r[3],fix:r[4],on:r[5],alt:r[6],iva:r[7],rai:r[8]||0}:{y:+r.y,m:+r.m,n:+r.n||1,en:+r.en||0,fix:+r.fix||0,on:+r.on||0,alt:+r.alt||0,iva:+r.iva||0,rai:+r.rai||0});
-    o[u].c=d[u].c||{};
+  UTZ.forEach(u=>{
+    const s=d[u]||{};
+    o[u].b=(s.b||[]).map(r=>Array.isArray(r)?{y:r[0],m:r[1],n:r[2],en:r[3],fix:r[4],on:r[5],alt:r[6],iva:r[7],rai:r[8]||0}:{y:+r.y,m:+r.m,n:+r.n||1,en:+r.en||0,fix:+r.fix||0,on:+r.on||0,alt:+r.alt||0,iva:+r.iva||0,rai:+r.rai||0});
+    o[u].c=s.c||{};
   });
   return o;
 }
@@ -250,11 +247,12 @@ async function push(d){
   await st.upload({name:FN},JSON.stringify(d)).complete;
   for(const f of old){try{await f.delete()}catch(e){}}
 }
+const hasData=d=>UTZ.some(u=>d[u].b.length);
 async function sync(){
   status('Sincronizzazione con MEGA…');
   const d=await pull();
   if(d){S=normalize(d);cache();$('first').hidden=true;render();status('Sincronizzato alle '+hhmm());return}
-  if(S.L.b.length||S.G.b.length){await push(S);status('Sincronizzato alle '+hhmm());return}
+  if(hasData(S)){await push(S);status('Sincronizzato alle '+hhmm());return}
   $('first').hidden=false;render();status('Nessun dato su MEGA');
 }
 async function commit(fn,okMsg){
@@ -289,9 +287,11 @@ async function refresh(){
 }
 function logout(){if(!confirm('Uscire? Credenziali e copia locale verranno rimosse da questo dispositivo.'))return;ls.del(KR);ls.del(KC);st=null;S=empty();showLogin()}
 
-// ---------- calcoli (u = 'L' o 'G', di default l'utenza selezionata) ----------
-function years(){const s=new Set();['L','G'].forEach(u=>{S[u].b.forEach(b=>s.add(b.y));Object.keys(S[u].c).forEach(y=>{if((S[u].c[y]||[]).some(v=>v!=null))s.add(+y)})});return [...s].sort((a,b)=>a-b)}
-function billYears(){return years().filter(y=>S.L.b.some(b=>b.y==y)||S.G.b.some(b=>b.y==y))}
+// ---------- calcoli (u = 'L', 'G' o 'A'; di default l'utenza selezionata) ----------
+function years(){const s=new Set();UTZ.forEach(u=>{S[u].b.forEach(b=>s.add(b.y));Object.keys(S[u].c).forEach(y=>{if((S[u].c[y]||[]).some(v=>v!=null))s.add(+y)})});return [...s].sort((a,b)=>a-b)}
+function billYears(){return years().filter(y=>UTZ.some(u=>S[u].b.some(b=>b.y==y)))}
+// utenze con almeno una bolletta
+function used(){const r=UTZ.filter(u=>S[u].b.length);return r.length?r:['L','G']}
 function cv(y,m,u=U){const a=S[u].c[y]||[];const v=a[m-1];return v==null||v===''?null:+v}
 function lastM(y,u=U){let l=0;for(let m=1;m<=12;m++)if(cv(y,m,u)!=null)l=m;S[u].b.forEach(b=>{if(b.y==y&&b.m>l)l=b.m});return l}
 function spesa(y,up,u=U){return S[u].b.filter(b=>b.y==y&&b.m<=up).reduce((s,b)=>s+tot(b),0)}
@@ -300,15 +300,18 @@ function consPer(b,u=U){let s=0;for(let k=0;k<b.n;k++){let mm=b.m-k,yy=b.y;if(mm
 function unitCost(y,u=U,up=12){const bs=S[u].b.filter(b=>b.y==y&&b.m<=up);const c=bs.reduce((s,b)=>s+consPer(b,u),0);const e=bs.reduce((s,b)=>s+tot(b)-b.rai,0);return c>0?e/c:null}
 // spesa ripartita sui mesi di competenza
 function spM(y,u){const a=Array(12).fill(0);S[u].b.forEach(b=>{const t=tot(b)/b.n;for(let k=0;k<b.n;k++){let mm=b.m-k,yy=b.y;if(mm<1){mm+=12;yy--}if(yy==y)a[mm-1]+=t}});return a}
+const perLbl=b=>{if(b.n<=1)return MESI[b.m-1];const s=((b.m-b.n)%12+12)%12;return MESI[s]+'–'+MESI[b.m-1]};
 // colore fisso per anno (non cambia se si nascondono altri anni)
 function ycol(y){const ys=years();const i=ys.length-1-ys.indexOf(y);return PAL[(i<0?0:i)%PAL.length]}
 function lgHTML(items){return items.map(([c,l])=>'<span><span class="sq" style="background:'+c+'"></span>'+l+'</span>').join('')}
+function card(l,v,s){return '<div><div class="kl">'+l+'</div><div class="kv">'+v+'</div><div class="kd" style="color:var(--tx2)">'+(s||'')+'</div></div>'}
 function delta(el,cur,prev,lbl){if(prev==null||!prev){el.textContent='';return}const p=(cur-prev)/Math.abs(prev)*100;el.style.color=p>0?'var(--ko)':'var(--ok)';el.textContent=(p>0?'+':'')+nf(p,1)+'% '+lbl}
 function dtxt(cur,prev){if(cur==null||prev==null||!prev||!cur)return '';const p=(cur-prev)/Math.abs(prev)*100;return '<span style="color:var(--'+(p>0?'ko':'ok')+')">'+(p>0?'+':'')+nf(p,1)+'%</span>'}
 const base={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:ink,autoSkip:false,maxRotation:45},grid:{display:false}},y:{ticks:{color:ink},grid:{color:grid}}}};
 function draw(id,cfg){if(ch[id])ch[id].destroy();ch[id]=new Chart($(id),cfg)}
 function setU(u){U=u;render()}
 function setCM(v){CM=v;render()}
+function setHU(u){HU=u;renderC()}
 function setP(p){P=p;$('pD').hidden=p!=='D';$('pC').hidden=p!=='C';render();window.scrollTo({top:0})}
 function render(){
   $('nD').className=P==='D'?'on':'';$('nC').className=P==='C'?'on':'';
@@ -329,7 +332,7 @@ function chips(list){
 
 // ---------- PAGINA DETTAGLIO ----------
 function renderD(){
-  ['L','G'].forEach(u=>$('b'+u).className=U===u?'on':'');
+  UTZ.forEach(u=>$('b'+u).className=U===u?'on':'');
   const ys=years();if(ys.length&&!ys.includes(Y))Y=ys[ys.length-1];
   $('sY').innerHTML=ys.map(y=>'<option'+(y==Y?' selected':'')+'>'+y+'</option>').join('');
   const lm=lastM(Y),sp=spesa(Y,lm),spP=spesa(Y-1,lm),c=cSum(Y,lm),cP=cSum(Y-1,lm),lbl='vs '+(Y-1)+' stesso periodo';
@@ -351,28 +354,33 @@ function renderD(){
     return {label:String(y),data,borderColor:col,backgroundColor:col,borderWidth:y==Y?3:1.5,pointRadius:y==Y?3:0,pointHoverRadius:4,tension:.25,order:y==Y?0:1}})},
     options:{...base,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{filter:x=>x.raw!=null,itemSort:(a,b)=>(b.raw||0)-(a.raw||0),callbacks:{label:x=>x.dataset.label+': '+nf(x.raw,0)+' '+un()}}},scales:{x:{ticks:{color:ink},grid:{display:false}},y:{ticks:{color:ink,callback:v=>nf(v,0)},grid:{color:grid}}}}});
 
+  const VN=VNX[U];
   const yb=ys.filter(y=>S[U].b.some(b=>b.y==y)),vk=U==='L'?VK:VK.slice(0,5);
   $('lg2').innerHTML=vk.map(k=>'<span><span class="sq" style="background:'+VC[k]+'"></span>'+VN[k]+'</span>').join('');
   draw('c2',{type:'bar',data:{labels:yb.map(String),datasets:vk.map(k=>({label:VN[k],data:yb.map(y=>r2(S[U].b.filter(b=>b.y==y).reduce((s,b)=>s+(+b[k]||0),0))),backgroundColor:VC[k],borderColor:surf,borderWidth:1,maxBarThickness:24}))},options:{...base,scales:{x:{stacked:true,ticks:{color:ink},grid:{display:false}},y:{stacked:true,ticks:{color:ink,callback:v=>nf(v,0)+' €'},grid:{color:grid}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:x=>x.dataset.label+': '+eur(x.raw),footer:it=>'Totale: '+eur(it.reduce((s,x)=>s+x.raw,0))}}}}});
   const yu=yb.filter(y=>unitCost(y)!=null);
   draw('c3',{type:'line',data:{labels:yu.map(String),datasets:[{data:yu.map(y=>r2(unitCost(y)*1000)/1000),borderColor:'#2a78d6',backgroundColor:'#2a78d6',borderWidth:2,pointRadius:4,pointBorderColor:surf,pointBorderWidth:2,tension:.2}]},options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:x=>nf(x.raw,3)+' €/'+un()}}},scales:{x:{ticks:{color:ink},grid:{display:false}},y:{ticks:{color:ink,callback:v=>nf(v,2)},grid:{color:grid}}}}});
   const rows=S[U].b.filter(b=>b.y==Y).sort((a,b)=>a.m-b.m);
-  $('hT').textContent='Bollette '+(U==='L'?'luce':'gas')+' '+Y;
+  $('hT').textContent='Bollette '+lc(U)+' '+Y;
   let h='<tr><th>Periodo</th><th>Consumo</th><th>Totale</th><th>€/'+un()+'</th><th></th></tr>',tt=0,tc=0;
-  rows.forEach(b=>{const t=tot(b),c=consPer(b);tt+=t;tc+=c;const p=b.n==2?MESI[(b.m+10)%12]+'–'+MESI[b.m-1]:MESI[b.m-1];
-    h+='<tr><td>'+p+'</td><td>'+nf(c,0)+'</td><td>'+eur(t)+'</td><td>'+(c?nf((t-b.rai)/c,3):'-')+'</td><td><button class="ib" onclick="edit('+b.y+','+b.m+')">Modifica</button> <button class="ib" onclick="del('+b.y+','+b.m+')">Elimina</button></td></tr>'});
+  rows.forEach(b=>{const t=tot(b),c=consPer(b);tt+=t;tc+=c;
+    h+='<tr><td>'+perLbl(b)+'</td><td>'+nf(c,0)+'</td><td>'+eur(t)+'</td><td>'+(c?nf((t-b.rai)/c,3):'-')+'</td><td><button class="ib" onclick="edit('+b.y+','+b.m+')">Modifica</button> <button class="ib" onclick="del('+b.y+','+b.m+')">Elimina</button></td></tr>'});
   h+='<tr><td><b>Totale</b></td><td><b>'+nf(tc,0)+'</b></td><td><b>'+eur(tt)+'</b></td><td></td><td></td></tr>';
   $('tab').innerHTML=rows.length?h:'<tr><td style="color:var(--tx2)">Nessuna bolletta registrata per questo anno.</td></tr>';
-  $('raiL').style.visibility=U==='L'?'visible':'hidden';$('fcl').textContent='Consumo del mese ('+un()+')';
+  // modulo: etichette secondo l'utenza
+  VK.slice(0,5).forEach(k=>$('t_'+k).textContent=VN[k]);
+  $('raiL').style.visibility=U==='L'?'visible':'hidden';
+  $('nA').hidden=U!=='A';
+  $('fcl').textContent='Consumo della bolletta ('+un()+')';
   if(!$('fy').value)$('fy').value=new Date().getFullYear();live();
 }
 
 // ---------- PAGINA CONFRONTO ----------
-function autoUp(){const yb=billYears();if(!yb.length)return 12;const ly=yb[yb.length-1];return Math.max(lastM(ly,'L'),lastM(ly,'G'))||12}
+function autoUp(){const yb=billYears();if(!yb.length)return 12;const ly=yb[yb.length-1];return Math.max(...used().map(u=>lastM(ly,u)))||12}
 function curUp(){return UP||autoUp()}
 const pl=up=>up==12?'anno intero':'Gen–'+MESI[up-1];
-function compData(up){return billYears().map(y=>{const sL=spesa(y,up,'L'),sG=spesa(y,up,'G');
-  return {y,cL:cSum(y,up,'L'),cG:cSum(y,up,'G'),sL,sG,t:sL+sG,uL:unitCost(y,'L',up),uG:unitCost(y,'G',up)}})}
+function compData(up){const UU=used();return billYears().map(y=>{const o={y,c:{},s:{},uc:{},t:0};
+  UU.forEach(u=>{o.c[u]=cSum(y,up,u);o.s[u]=spesa(y,up,u);o.uc[u]=unitCost(y,u,up);o.t+=o.s[u]});return o})}
 
 // ---------- STIMA FINE ANNO ----------
 function forecast(u){
@@ -397,6 +405,7 @@ function forecast(u){
 const fOk=f=>f&&!f.none;
 
 function renderC(){
+  const UU=used();if(!UU.includes(HU))HU=UU[0];
   const a=autoUp(),up=curUp();
   let o='<option value="0"'+(UP==0?' selected':'')+'>Come anno in corso ('+pl(a)+')</option><option value="12"'+(UP==12?' selected':'')+'>Anno intero</option>';
   for(let m=1;m<=11;m++)o+='<option value="'+m+'"'+(UP==m?' selected':'')+'>Gen–'+MESI[m-1]+'</option>';
@@ -405,77 +414,67 @@ function renderC(){
 
   const Dall=compData(up),byY={};Dall.forEach(d=>byY[d.y]=d);
   const D=Dall.filter(d=>sel(d.y)),yl=D.map(d=>d.y);
-  const last=Dall[Dall.length-1],prev=last?byY[last.y-1]:null;
+  const last=Dall[Dall.length-1],prev=last?byY[last.y-1]:null,ly=last?last.y:null;
   const per=' ('+pl(up)+')';
 
-  // indicatori (sempre su tutti i dati: anno più recente vs precedente)
+  // indicatori (spese: sempre su tutti i dati, anno più recente vs precedente)
+  let k='';
   if(last){
-    $('k5').textContent=eur(last.t);$('d5').innerHTML=last.y+per+(prev?' · '+dtxt(last.t,prev.t)+' vs '+prev.y:'');
-    $('k6').textContent=eur(last.sL);$('d6').innerHTML=last.y+(prev?' · '+dtxt(last.sL,prev.sL)+' vs '+prev.y:'');
-    $('k7').textContent=eur(last.sG);$('d7').innerHTML=last.y+(prev?' · '+dtxt(last.sG,prev.sG)+' vs '+prev.y:'');
-  }else{['k5','k6','k7'].forEach(k=>$(k).textContent='-');['d5','d6','d7'].forEach(k=>$(k).textContent='')}
-  if(D.length){const mx=D.reduce((m,d)=>d.t>m.t?d:m,D[0]);$('k8').textContent=mx.y;$('d8').textContent=eur(mx.t)+per}
-  else{$('k8').textContent='-';$('d8').textContent='nessun anno selezionato'}
+    const vs=(c,p)=>prev?' · '+dtxt(c,p)+' vs '+prev.y:'';
+    k+=card('Spesa '+UU.map(lc).join(' + '),eur(last.t),last.y+per+vs(last.t,prev&&prev.t));
+    UU.forEach(u=>k+=card('Spesa '+lc(u),eur(last.s[u]),last.y+vs(last.s[u],prev&&prev.s[u])));
+    if(D.length){const mx=D.reduce((m,d)=>d.t>m.t?d:m,D[0]);k+=card('Anno più caro (tra i selezionati)',mx.y,eur(mx.t)+per)}
+    else k+=card('Anno più caro (tra i selezionati)','-','nessun anno selezionato');
+  }
+  $('kpC').innerHTML=k;
 
   // stima fine anno
-  const fL=forecast('L'),fG=forecast('G');
-  const fk=(k,d,f,pt)=>{
-    if(!f){$(k).textContent='-';$(d).textContent='';return}
-    if(f.none){$(k).textContent='-';$(d).textContent='dati insufficienti per la stima';$(d).style.color='var(--tx2)';return}
-    $(k).textContent=eur(f.est);$(d).style.color='var(--tx2)';
-    $(d).innerHTML=(f.done?'anno completo':'forbice '+eur(f.lo)+' – '+eur(f.hi))+(pt?' · '+dtxt(f.est,pt)+' vs '+(f.y-1):'');
-  };
-  const ly=last?last.y:null;
+  const F={};UU.forEach(u=>F[u]=forecast(u));
   $('hF').textContent='Stima spesa a fine '+(ly||'anno');
-  fk('k9','d9',fL,ly?spesa(ly-1,12,'L'):0);
-  fk('k10','d10',fG,ly?spesa(ly-1,12,'G'):0);
-  if(fOk(fL)&&fOk(fG))fk('k11','d11',{y:fL.y,est:fL.est+fG.est,lo:fL.lo+fG.lo,hi:fL.hi+fG.hi,done:fL.done&&fG.done},ly?spesa(ly-1,12,'L')+spesa(ly-1,12,'G'):0);
-  else fk('k11','d11',fL||fG?{none:true}:null,0);
-  const nt=(f,n)=>{
+  const fc=(l,f,pt)=>{
+    if(!f)return card(l,'-','');
+    if(f.none)return card(l,'-','dati insufficienti per la stima');
+    return card(l,eur(f.est),(f.done?'anno completo':'forbice '+eur(f.lo)+' – '+eur(f.hi))+(pt?' · '+dtxt(f.est,pt)+' vs '+(f.y-1):''));
+  };
+  let kf=UU.map(u=>fc(UN[u]+' – stima annua',F[u],ly?spesa(ly-1,12,u):0)).join('');
+  if(UU.length>1&&ly){
+    const ok=UU.filter(u=>fOk(F[u])),miss=UU.filter(u=>!fOk(F[u]));
+    if(ok.length){
+      const sm=key=>ok.reduce((s,u)=>s+F[u][key],0);
+      const pt=ok.reduce((s,u)=>s+spesa(ly-1,12,u),0),done=ok.every(u=>F[u].done);
+      kf+=card('Totale – stima annua',eur(sm('est')),(done?'anno completo':'forbice '+eur(sm('lo'))+' – '+eur(sm('hi')))
+        +(pt?' · '+dtxt(sm('est'),pt)+' vs '+(ly-1):'')+(miss.length?'<br>senza '+miss.map(lc).join(', ')+' (dati insufficienti)':''));
+    }else kf+=card('Totale – stima annua','-','dati insufficienti per la stima');
+  }
+  $('kpF').innerHTML=kf;
+  const nt=f=>{
     if(!f||f.none||f.done)return '';
-    return '<b>'+n+'</b>: '+(f.lb?'già fatturati '+eur(f.act)+' fino a '+MESI[f.lb-1]:'nessuna bolletta ancora')+'; '
+    return '<b>'+UN[f.u]+'</b>: '+(f.lb?'già fatturati '+eur(f.act)+' fino a '+MESI[f.lb-1]:'nessuna bolletta ancora')+'; '
       +MESI[f.lb]+'–Dic stimati su consumi medi '+f.refs.join(', ')+' ('+nf(f.remC,0)+' '+un(f.u)+') × '+nf(f.uc,3)+' €/'+un(f.u)
       +' (costo medio '+f.ucY+')'+(f.rai>0?' + canone RAI '+eur(f.rai):'')+'.<br>';
   };
-  const nTxt=nt(fL,'Luce')+nt(fG,'Gas');
+  const nTxt=UU.map(u=>nt(F[u])).join('');
   $('nF').innerHTML=nTxt?nTxt+'La forbice usa l\'anno di riferimento con consumi più bassi e quello con consumi più alti. Non considera variazioni di prezzo future né conguagli.':'';
 
   // spesa per anno (+ stima se anno intero)
-  const showF=up==12;
-  const stD=(f,c,l)=>({label:l,st:true,data:yl.map(y=>fOk(f)&&!f.done&&y==f.y?r2(f.est-f.act):null),backgroundColor:c+'59',borderColor:surf,borderWidth:1,maxBarThickness:30});
-  const ds5=[
-    {label:'Luce',data:D.map(d=>r2(d.sL)),backgroundColor:CL,borderColor:surf,borderWidth:1,maxBarThickness:30},
-    {label:'Gas',data:D.map(d=>r2(d.sG)),backgroundColor:CG,borderColor:surf,borderWidth:1,maxBarThickness:30}];
-  const lg5=[[CL,'Luce'],[CG,'Gas']];
-  if(showF){ds5.push(stD(fL,CL,'Luce (stima)'),stD(fG,CG,'Gas (stima)'));lg5.push([CL+'59','Luce stimata'],[CG+'59','Gas stimato'])}
+  const ds5=UU.map(u=>({label:UN[u],data:D.map(d=>r2(d.s[u])),backgroundColor:UC[u],borderColor:surf,borderWidth:1,maxBarThickness:30}));
+  const lg5=UU.map(u=>[UC[u],UN[u]]);
+  if(up==12)UU.forEach(u=>{const f=F[u];if(fOk(f)&&!f.done){
+    ds5.push({label:UN[u]+' (stima)',st:true,data:yl.map(y=>y==f.y?r2(f.est-f.act):null),backgroundColor:UC[u]+'59',borderColor:surf,borderWidth:1,maxBarThickness:30});
+    lg5.push([UC[u]+'59',UN[u]+' (stima)'])}});
   $('lg5').innerHTML=lgHTML(lg5);
   draw('c5',{type:'bar',data:{labels:yl.map(String),datasets:ds5},
     options:{...base,scales:{x:{stacked:true,ticks:{color:ink},grid:{display:false}},y:{stacked:true,ticks:{color:ink,callback:v=>nf(v,0)+' €'},grid:{color:grid}}},
     plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,filter:x=>x.raw!=null,callbacks:{label:x=>x.dataset.label+': '+eur(x.raw),footer:it=>'Totale'+(it.some(x=>x.dataset.st)?' con stima':'')+': '+eur(it.reduce((s,x)=>s+(x.raw||0),0))}}}}});
 
-  // consumi per anno (doppio asse)
-  const dual=(tl,tr,dec)=>({x:{ticks:{color:ink},grid:{display:false}},
-    y:{position:'left',ticks:{color:ink,callback:v=>nf(v,dec)},grid:{color:grid},title:{display:true,text:tl,color:ink}},
-    y1:{position:'right',ticks:{color:ink,callback:v=>nf(v,dec)},grid:{display:false},title:{display:true,text:tr,color:ink}}});
-  $('lg6').innerHTML=lgHTML([[CL,'Luce (kWh, asse sinistro)'],[CG,'Gas (Smc, asse destro)']]);
-  draw('c6',{type:'bar',data:{labels:yl.map(String),datasets:[
-    {label:'Luce',data:D.map(d=>d.cL||null),backgroundColor:CL,yAxisID:'y',borderRadius:4,maxBarThickness:22},
-    {label:'Gas',data:D.map(d=>d.cG||null),backgroundColor:CG,yAxisID:'y1',borderRadius:4,maxBarThickness:22}]},
-    options:{...base,scales:dual('kWh','Smc',0),plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:x=>x.dataset.label+': '+nf(x.raw||0,0)+' '+(x.dataset.yAxisID==='y'?'kWh':'Smc')}}}}});
-
-  // costo unitario
-  $('lg7').innerHTML=lgHTML([[CL,'€/kWh (asse sinistro)'],[CG,'€/Smc (asse destro)']]);
-  const ln=(l,c,ax,k)=>({label:l,data:D.map(d=>d[k]!=null?r2(d[k]*1000)/1000:null),borderColor:c,backgroundColor:c,yAxisID:ax,borderWidth:2,pointRadius:4,pointBorderColor:surf,pointBorderWidth:2,tension:.2,spanGaps:true});
-  draw('c7',{type:'line',data:{labels:yl.map(String),datasets:[ln('Luce',CL,'y','uL'),ln('Gas',CG,'y1','uG')]},
-    options:{...base,scales:dual('€/kWh','€/Smc',2),plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:x=>x.dataset.label+': '+nf(x.raw,3)+(x.dataset.yAxisID==='y'?' €/kWh':' €/Smc')}}}}});
-
   // spesa cumulata (+ proiezione tratteggiata se l'anno in corso è selezionato)
-  const ds8=yl.map(y=>{const l=Math.max(lastM(y,'L'),lastM(y,'G'));const aL=spM(y,'L'),aG=spM(y,'G');let run=0;const col=ycol(y);
-    return {label:String(y),data:MESI.map((_,i)=>{if(i+1>l)return null;run+=aL[i]+aG[i];return r2(run)}),borderColor:col,backgroundColor:col,borderWidth:y==ly?3:1.5,pointRadius:y==ly?3:0,pointHoverRadius:4,tension:.2,order:y==ly?0:1}});
+  const ds8=yl.map(y=>{const l=Math.max(...UU.map(u=>lastM(y,u)));const A=UU.map(u=>spM(y,u));let run=0;const col=ycol(y);
+    return {label:String(y),data:MESI.map((_,i)=>{if(i+1>l)return null;run+=A.reduce((s,a)=>s+a[i],0);return r2(run)}),borderColor:col,backgroundColor:col,borderWidth:y==ly?3:1.5,pointRadius:y==ly?3:0,pointHoverRadius:4,tension:.2,order:y==ly?0:1}});
   const lg8=yl.map(y=>[ycol(y),String(y)]);
-  if(ly&&sel(ly)&&fOk(fL)&&fOk(fG)&&!(fL.done&&fG.done)){
-    const aL=spM(ly,'L'),aG=spM(ly,'G'),m0=Math.max(Math.min(fL.lb,fG.lb),1);let run=0;
-    const data=MESI.map((_,i)=>{const m=i+1;run+=(m<=fL.lb?aL[i]:fL.mon[i])+(m<=fG.lb?aG[i]:fG.mon[i]);return m>=m0?r2(run):null});
+  if(ly&&sel(ly)&&UU.every(u=>fOk(F[u]))&&!UU.every(u=>F[u].done)){
+    const A={};UU.forEach(u=>A[u]=spM(ly,u));
+    const m0=Math.max(Math.min(...UU.map(u=>F[u].lb)),1);let run=0;
+    const data=MESI.map((_,i)=>{const m=i+1;UU.forEach(u=>run+=m<=F[u].lb?A[u][i]:F[u].mon[i]);return m>=m0?r2(run):null});
     ds8.push({label:'Stima '+ly,data,borderColor:ycol(ly),backgroundColor:ycol(ly),borderDash:[6,4],borderWidth:2,pointRadius:0,pointHoverRadius:3,tension:.2,order:2});
     lg8.push([ycol(ly),'Stima '+ly+' (tratteggio)']);
   }
@@ -484,16 +483,35 @@ function renderC(){
     options:{...base,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{filter:x=>x.raw!=null,itemSort:(a,b)=>(b.raw||0)-(a.raw||0),callbacks:{label:x=>x.dataset.label+': '+eur(x.raw)}}},scales:{x:{ticks:{color:ink},grid:{display:false}},y:{ticks:{color:ink,callback:v=>nf(v,0)+' €'},grid:{color:grid}}}}});
 
   // tabella (Δ sempre rispetto all'anno solare precedente, anche se nascosto)
-  let h='<tr><th>Anno</th><th>Luce kWh</th><th>Δ</th><th>Gas Smc</th><th>Δ</th><th>Spesa luce</th><th>Spesa gas</th><th>Totale</th><th>Δ</th><th>€/kWh</th><th>€/Smc</th></tr>';
+  let h='<tr><th>Anno</th>'+UU.map(u=>'<th>'+UN[u]+' '+un(u)+'</th><th>Δ</th>').join('')
+    +UU.map(u=>'<th>Spesa '+lc(u)+'</th>').join('')+'<th>Totale</th><th>Δ</th>'
+    +UU.map(u=>'<th>€/'+un(u)+'</th>').join('')+'</tr>';
   D.forEach(d=>{const p=byY[d.y-1];
-    h+='<tr><td><b>'+d.y+'</b></td><td>'+(d.cL?nf(d.cL,0):'-')+'</td><td>'+(p?dtxt(d.cL,p.cL):'')+'</td><td>'+(d.cG?nf(d.cG,0):'-')+'</td><td>'+(p?dtxt(d.cG,p.cG):'')+'</td><td>'+eur(d.sL)+'</td><td>'+eur(d.sG)+'</td><td><b>'+eur(d.t)+'</b></td><td>'+(p?dtxt(d.t,p.t):'')+'</td><td>'+(d.uL!=null?nf(d.uL,3):'-')+'</td><td>'+(d.uG!=null?nf(d.uG,3):'-')+'</td></tr>'});
+    h+='<tr><td><b>'+d.y+'</b></td>'
+      +UU.map(u=>'<td>'+(d.c[u]?nf(d.c[u],0):'-')+'</td><td>'+(p?dtxt(d.c[u],p.c[u]):'')+'</td>').join('')
+      +UU.map(u=>'<td>'+eur(d.s[u])+'</td>').join('')
+      +'<td><b>'+eur(d.t)+'</b></td><td>'+(p?dtxt(d.t,p.t):'')+'</td>'
+      +UU.map(u=>'<td>'+(d.uc[u]!=null?nf(d.uc[u],3):'-')+'</td>').join('')+'</tr>'});
   $('tabC').innerHTML=D.length?h:'<tr><td style="color:var(--tx2)">'+(Dall.length?'Nessun anno selezionato.':'Nessuna bolletta registrata.')+'</td></tr>';
 
+  // ---- dettaglio per utenza ----
+  $('hUs').innerHTML=UU.map(u=>'<button class="ib'+(HU===u?' on':'')+'" onclick="setHU(\''+u+'\')">'+UN[u]+'</button>').join('');
+  const col=UC[HU];
+  $('h6').textContent='Consumi per anno – '+UN[HU]+' ('+un(HU)+', '+pl(up)+')';
+  draw('c6',{type:'bar',data:{labels:yl.map(String),datasets:[{label:UN[HU],data:D.map(d=>d.c[HU]||null),backgroundColor:col,borderRadius:4,maxBarThickness:30}]},
+    options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{
+      label:x=>nf(x.raw||0,0)+' '+un(HU),
+      footer:it=>{const y=+it[0].label,p=byY[y-1];if(!p||!p.c[HU]||!it[0].raw)return '';const pc=(it[0].raw-p.c[HU])/p.c[HU]*100;return (pc>0?'+':'')+nf(pc,1)+'% vs '+(y-1)}}}},
+      scales:{x:{ticks:{color:ink},grid:{display:false}},y:{ticks:{color:ink,callback:v=>nf(v,0)},grid:{color:grid}}}}});
+  $('h7').textContent='Costo medio per unità – '+UN[HU]+' (€/'+un(HU)+(HU==='L'?', escluso canone RAI':'')+')';
+  draw('c7',{type:'line',data:{labels:yl.map(String),datasets:[{label:UN[HU],data:D.map(d=>d.uc[HU]!=null?r2(d.uc[HU]*1000)/1000:null),borderColor:col,backgroundColor:col,borderWidth:2,pointRadius:4,pointBorderColor:surf,pointBorderWidth:2,tension:.2,spanGaps:true}]},
+    options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:x=>nf(x.raw,3)+' €/'+un(HU)}}},scales:{x:{ticks:{color:ink},grid:{display:false}},y:{ticks:{color:ink,callback:v=>nf(v,2)},grid:{color:grid}}}}});
+
   // mappa consumi
-  $('hL').className='ib'+(HU==='L'?' on':'');$('hG').className='ib'+(HU==='G'?' on':'');
+  $('h9').textContent='Mappa dei consumi mensili – '+UN[HU];
   const yh=years().filter(y=>sel(y)&&cSum(y,12,HU)>0);let mx=0;
   yh.forEach(y=>{for(let m=1;m<=12;m++)mx=Math.max(mx,cv(y,m,HU)||0)});
-  const rgb=HU==='L'?'237,161,0':'42,120,214';
+  const rgb=rgbOf(col);
   let t='<tr><th>'+un(HU)+'</th>'+MESI.map(m=>'<th>'+m+'</th>').join('')+'<th style="text-align:right">Totale</th></tr>';
   yh.slice().reverse().forEach(y=>{t+='<tr><td><b>'+y+'</b></td>';
     for(let m=1;m<=12;m++){const v=cv(y,m,HU);
@@ -505,10 +523,10 @@ function renderC(){
 }
 
 function exportCSV(){
-  const up=curUp(),D=compData(up).filter(d=>sel(d.y));
+  const UU=used(),up=curUp(),D=compData(up).filter(d=>sel(d.y));
   const f=(v,d)=>v==null||v===''?'':Number(v).toFixed(d).replace('.',',');
-  const L=[['Anno','Periodo','Luce kWh','Gas Smc','Spesa luce €','Spesa gas €','Totale €','€/kWh','€/Smc'].join(';')];
-  D.forEach(d=>L.push([d.y,pl(up),f(d.cL,0),f(d.cG,0),f(d.sL,2),f(d.sG,2),f(d.t,2),f(d.uL,4),f(d.uG,4)].join(';')));
+  const L=[['Anno','Periodo',...UU.map(u=>UN[u]+' '+un(u)),...UU.map(u=>'Spesa '+lc(u)+' €'),'Totale €',...UU.map(u=>'€/'+un(u))].join(';')];
+  D.forEach(d=>L.push([d.y,pl(up),...UU.map(u=>f(d.c[u],0)),...UU.map(u=>f(d.s[u],2)),f(d.t,2),...UU.map(u=>f(d.uc[u],4))].join(';')));
   const blob=new Blob(['\ufeff'+L.join('\r\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download='confronto-bollette-'+new Date().toISOString().slice(0,10)+'.csv';
@@ -517,7 +535,7 @@ function exportCSV(){
 
 // ---------- form ----------
 $('fm').innerHTML=MESI.map((m,i)=>'<option value="'+(i+1)+'">'+m+'</option>').join('');
-function live(){let s=0,a=false;VK.forEach(k=>{if(k==='rai'&&U==='G')return;const v=$('f_'+k).value;if(v!==''){s+=+v;a=true}});$('ftot').textContent=a?'Totale: '+eur(s):''}
+function live(){let s=0,a=false;VK.forEach(k=>{if(k==='rai'&&U!=='L')return;const v=$('f_'+k).value;if(v!==''){s+=+v;a=true}});$('ftot').textContent=a?'Totale: '+eur(s):''}
 document.querySelectorAll('#app .fg input, #app .fg select').forEach(el=>el.addEventListener('input',live));
 $('lp').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 
@@ -531,8 +549,8 @@ function clr(){
 
 function edit(y,m){
   const b=S[U].b.find(x=>x.y==y&&x.m==m);if(!b)return;
-  $('fy').value=b.y;$('fm').value=b.m;$('fn').value=b.n;
-  const c=consPer(b);$('fc').value=c?c:'';
+  $('fy').value=b.y;$('fm').value=b.m;$('fn').value=String(b.n);
+  const c=consPer(b);$('fc').value=c?r2(c):'';
   VK.forEach(k=>$('f_'+k).value=b[k]?b[k]:'');
   live();msg('','Modifica i campi e premi "Salva bolletta".');
   $('fy').scrollIntoView({behavior:'smooth',block:'center'});
@@ -561,7 +579,7 @@ async function save(){
 }
 
 async function del(y,m){
-  if(!confirm('Eliminare la bolletta '+MESI[m-1]+' '+y+'?'))return;
+  if(!confirm('Eliminare la bolletta '+lc(U)+' '+MESI[m-1]+' '+y+'?'))return;
   const u=U;
   await commit(d=>{d[u].b=d[u].b.filter(b=>!(b.y==y&&b.m==m))},'Bolletta eliminata.');
 }
@@ -582,8 +600,8 @@ function importFile(inp){
     let n;
     try{n=normalize(JSON.parse(rd.result))}
     catch(e){msg('err','File non valido: '+(e.message||e));inp.value='';return}
-    if((S.L.b.length||S.G.b.length)&&!confirm('Sostituire tutti i dati attuali con quelli del file?')){inp.value='';return}
-    await commit(d=>{d.L=n.L;d.G=n.G},'Backup importato.');
+    if(hasData(S)&&!confirm('Sostituire tutti i dati attuali con quelli del file?')){inp.value='';return}
+    await commit(d=>{UTZ.forEach(u=>d[u]=n[u])},'Backup importato.');
     inp.value='';
   };
   rd.readAsText(f);
@@ -598,6 +616,6 @@ function importFile(inp){
   else showLogin();
 })();
 </script>
-  <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{})</script>
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{})</script>
 </body>
 </html>
