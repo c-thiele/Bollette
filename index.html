@@ -40,6 +40,11 @@ th{font-weight:600;color:var(--tx2)}td:first-child,th:first-child{text-align:lef
 .hm td:first-child,.hm th:first-child{text-align:left;padding-right:8px}
 .hm td.tt{font-weight:600;text-align:right;padding-left:8px}
 .nav button{font-weight:600}
+.yc{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.yc .yb{display:inline-flex;align-items:center;gap:5px}
+.yc .yb.off{opacity:.5;text-decoration:line-through}
+.yc .sep{width:1px;height:20px;background:var(--bd);margin:0 2px}
+.yl{font-size:12px;color:var(--tx2);margin-right:2px}
 </style>
 </head>
 <body>
@@ -89,12 +94,13 @@ th{font-weight:600;color:var(--tx2)}td:first-child,th:first-child{text-align:lef
     <div style="position:relative;height:230px"><canvas id="c1"></canvas></div>
 
     <div class="h">Consumo mensile – tutti gli anni</div>
-    <div class="tb" style="margin-bottom:4px">
+    <div class="tb" style="margin-bottom:6px">
       <button id="mM" class="ib" onclick="setCM(0)">Mese per mese</button>
       <button id="mC" class="ib" onclick="setCM(1)">Cumulato da gennaio</button>
     </div>
-    <div class="lg" id="lg4"></div>
+    <div class="yc" id="yrs4"></div>
     <div style="position:relative;height:260px"><canvas id="c4"></canvas></div>
+    <p class="note">La linea più spessa è l'anno selezionato in alto.</p>
 
     <div class="h">Spesa annua per voce</div>
     <div class="lg" id="lg2"></div>
@@ -129,12 +135,14 @@ th{font-weight:600;color:var(--tx2)}td:first-child,th:first-child{text-align:lef
     <div class="tb" style="margin-bottom:4px">
       <label class="msg" style="display:flex;align-items:center;gap:8px">Periodo confrontato <select id="sUp" onchange="UP=+this.value;renderC()"></select></label>
     </div>
-    <p class="note" style="margin-bottom:12px">Per un confronto corretto con l'anno in corso, tieni lo stesso periodo per tutti gli anni.</p>
-    <div class="kp">
+    <p class="note" style="margin-bottom:10px">Per un confronto corretto con l'anno in corso, tieni lo stesso periodo per tutti gli anni.</p>
+    <div class="yc" id="yrsC"></div>
+
+    <div class="kp" style="margin-top:8px">
       <div><div class="kl">Spesa luce + gas</div><div class="kv" id="k5">-</div><div class="kd" id="d5"></div></div>
       <div><div class="kl">Spesa luce</div><div class="kv" id="k6">-</div><div class="kd" id="d6"></div></div>
       <div><div class="kl">Spesa gas</div><div class="kv" id="k7">-</div><div class="kd" id="d7"></div></div>
-      <div><div class="kl">Anno più caro nel periodo</div><div class="kv" id="k8">-</div><div class="kd" id="d8" style="color:var(--tx2)"></div></div>
+      <div><div class="kl">Anno più caro (tra i selezionati)</div><div class="kv" id="k8">-</div><div class="kd" id="d8" style="color:var(--tx2)"></div></div>
     </div>
 
     <div class="h" id="hF">Stima spesa a fine anno</div>
@@ -172,7 +180,7 @@ th{font-weight:600;color:var(--tx2)}td:first-child,th:first-child{text-align:lef
       <button id="hG" class="ib" onclick="HU='G';renderC()">Gas</button>
     </div>
     <div style="overflow-x:auto"><table id="heat" class="hm"></table></div>
-    <p class="note">Più il colore è intenso, più alto è il consumo del mese rispetto al massimo registrato.</p>
+    <p class="note">Più il colore è intenso, più alto è il consumo del mese rispetto al massimo degli anni selezionati.</p>
   </div>
 
   <div class="h">Backup e account</div>
@@ -187,7 +195,7 @@ th{font-weight:600;color:var(--tx2)}td:first-child,th:first-child{text-align:lef
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://unpkg.com/megajs@1/dist/main.browser-umd.js"></script>
 <script>
-const FN='bollette.json',KC='bollette_cache',KR='bollette_cred';
+const FN='bollette.json',KC='bollette_cache',KR='bollette_cred',KX='bollette_anni_off';
 const MESI=['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 const VK=['en','fix','on','alt','iva','rai'];
 const VN={en:'Materia energia',fix:'Quote fisse e trasporto',on:'Oneri di sistema',alt:'Altro / ricalcoli',iva:'Imposte e IVA',rai:'Canone RAI'};
@@ -199,6 +207,7 @@ let S=empty(),U='L',Y=new Date().getFullYear(),ch={},st=null,busy=false;
 let P='D',CM=0,UP=0,HU='L';
 const $=id=>document.getElementById(id);
 const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
+let XY=new Set();try{XY=new Set(JSON.parse(ls.get(KX)||'[]').map(Number))}catch(e){}
 const r2=v=>Math.round(v*100)/100;
 const fe=new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'});
 const eur=v=>fe.format(r2(v));
@@ -286,7 +295,8 @@ function consPer(b,u=U){let s=0;for(let k=0;k<b.n;k++){let mm=b.m-k,yy=b.y;if(mm
 function unitCost(y,u=U,up=12){const bs=S[u].b.filter(b=>b.y==y&&b.m<=up);const c=bs.reduce((s,b)=>s+consPer(b,u),0);const e=bs.reduce((s,b)=>s+tot(b)-b.rai,0);return c>0?e/c:null}
 // spesa ripartita sui mesi di competenza
 function spM(y,u){const a=Array(12).fill(0);S[u].b.forEach(b=>{const t=tot(b)/b.n;for(let k=0;k<b.n;k++){let mm=b.m-k,yy=b.y;if(mm<1){mm+=12;yy--}if(yy==y)a[mm-1]+=t}});return a}
-function ycol(y,list){const i=list.length-1-list.indexOf(y);return PAL[i%PAL.length]}
+// colore fisso per anno (non cambia se si nascondono altri anni)
+function ycol(y){const ys=years();const i=ys.length-1-ys.indexOf(y);return PAL[(i<0?0:i)%PAL.length]}
 function lgHTML(items){return items.map(([c,l])=>'<span><span class="sq" style="background:'+c+'"></span>'+l+'</span>').join('')}
 function delta(el,cur,prev,lbl){if(prev==null||!prev){el.textContent='';return}const p=(cur-prev)/Math.abs(prev)*100;el.style.color=p>0?'var(--ko)':'var(--ok)';el.textContent=(p>0?'+':'')+nf(p,1)+'% '+lbl}
 function dtxt(cur,prev){if(cur==null||prev==null||!prev||!cur)return '';const p=(cur-prev)/Math.abs(prev)*100;return '<span style="color:var(--'+(p>0?'ko':'ok')+')">'+(p>0?'+':'')+nf(p,1)+'%</span>'}
@@ -298,6 +308,18 @@ function setP(p){P=p;$('pD').hidden=p!=='D';$('pC').hidden=p!=='C';render();wind
 function render(){
   $('nD').className=P==='D'?'on':'';$('nC').className=P==='C'?'on':'';
   if(P==='C')renderC();else renderD();
+}
+
+// ---------- selezione anni ----------
+const sel=y=>!XY.has(+y);
+function saveXY(){ls.set(KX,JSON.stringify([...XY]))}
+function togY(y){y=+y;XY.has(y)?XY.delete(y):XY.add(y);saveXY();render()}
+function setYs(n){const ys=years();XY=new Set(n?ys.slice(0,Math.max(ys.length-n,0)):[]);saveXY();render()}
+function chips(list){
+  if(!list.length)return '';
+  return '<span class="yl">Anni da confrontare:</span>'+list.map(y=>{const c=ycol(y),on=sel(y);
+    return '<button class="ib yb'+(on?' on':' off')+'" onclick="togY('+y+')" title="'+(on?'Nascondi ':'Mostra ')+y+'"><span class="sq" style="background:'+(on?c:'transparent')+';border:1px solid '+c+'"></span>'+y+'</button>'}).join('')
+    +'<span class="sep"></span><button class="ib" onclick="setYs(0)">Tutti</button><button class="ib" onclick="setYs(3)">Ultimi 3</button>';
 }
 
 // ---------- PAGINA DETTAGLIO ----------
@@ -315,11 +337,11 @@ function renderD(){
   $('lgA').textContent=Y+': '+nf(cSum(Y,12),0)+' '+un();$('lgB').textContent=(Y-1)+': '+nf(cSum(Y-1,12),0)+' '+un();
   draw('c1',{type:'bar',data:{labels:MESI,datasets:[{label:String(Y),data:MESI.map((_,i)=>cv(Y,i+1)),backgroundColor:'#2a78d6',borderRadius:4,maxBarThickness:18},{label:String(Y-1),data:MESI.map((_,i)=>cv(Y-1,i+1)),backgroundColor:'#b4b2a9',borderRadius:4,maxBarThickness:18}]},options:{...base,plugins:{legend:{display:false},tooltip:{callbacks:{label:x=>x.dataset.label+': '+nf(x.raw||0,0)+' '+un()}}}}});
 
-  // consumo mensile tutti gli anni
+  // consumo mensile tutti gli anni (con selezione anni)
   $('mM').className='ib'+(CM?'':' on');$('mC').className='ib'+(CM?' on':'');
-  const yc=ys.filter(y=>cSum(y,12)>0);
-  $('lg4').innerHTML=lgHTML(yc.map(y=>[ycol(y,yc),y+(y==Y?' (selezionato)':'')]));
-  draw('c4',{type:'line',data:{labels:MESI,datasets:yc.map(y=>{const l=lastM(y);let run=0;const col=ycol(y,yc);
+  const ycAll=ys.filter(y=>cSum(y,12)>0),yc=ycAll.filter(sel);
+  $('yrs4').innerHTML=chips(ycAll);
+  draw('c4',{type:'line',data:{labels:MESI,datasets:yc.map(y=>{const l=lastM(y);let run=0;const col=ycol(y);
     const data=MESI.map((_,i)=>{const v=cv(y,i+1);if(CM){if(i+1>l)return null;run+=v||0;return r2(run)}return v});
     return {label:String(y),data,borderColor:col,backgroundColor:col,borderWidth:y==Y?3:1.5,pointRadius:y==Y?3:0,pointHoverRadius:4,tension:.25,order:y==Y?0:1}})},
     options:{...base,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{filter:x=>x.raw!=null,itemSort:(a,b)=>(b.raw||0)-(a.raw||0),callbacks:{label:x=>x.dataset.label+': '+nf(x.raw,0)+' '+un()}}},scales:{x:{ticks:{color:ink},grid:{display:false}},y:{ticks:{color:ink,callback:v=>nf(v,0)},grid:{color:grid}}}}});
@@ -374,18 +396,21 @@ function renderC(){
   let o='<option value="0"'+(UP==0?' selected':'')+'>Come anno in corso ('+pl(a)+')</option><option value="12"'+(UP==12?' selected':'')+'>Anno intero</option>';
   for(let m=1;m<=11;m++)o+='<option value="'+m+'"'+(UP==m?' selected':'')+'>Gen–'+MESI[m-1]+'</option>';
   $('sUp').innerHTML=o;
-  const D=compData(up),yl=D.map(d=>d.y),last=D[D.length-1],prev=D.length>1?D[D.length-2]:null;
+  $('yrsC').innerHTML=chips(years());
+
+  const Dall=compData(up),byY={};Dall.forEach(d=>byY[d.y]=d);
+  const D=Dall.filter(d=>sel(d.y)),yl=D.map(d=>d.y);
+  const last=Dall[Dall.length-1],prev=last?byY[last.y-1]:null;
   const per=' ('+pl(up)+')';
 
-  // indicatori
+  // indicatori (sempre su tutti i dati: anno più recente vs precedente)
   if(last){
-    const vs=prev&&prev.y==last.y-1?prev:null;
-    $('k5').textContent=eur(last.t);$('d5').innerHTML=last.y+per+(vs?' · '+dtxt(last.t,vs.t)+' vs '+vs.y:'');
-    $('k6').textContent=eur(last.sL);$('d6').innerHTML=last.y+(vs?' · '+dtxt(last.sL,vs.sL)+' vs '+vs.y:'');
-    $('k7').textContent=eur(last.sG);$('d7').innerHTML=last.y+(vs?' · '+dtxt(last.sG,vs.sG)+' vs '+vs.y:'');
-    const mx=D.reduce((m,d)=>d.t>m.t?d:m,D[0]);
-    $('k8').textContent=mx.y;$('d8').textContent=eur(mx.t)+per;
-  }else{['k5','k6','k7','k8'].forEach(k=>$(k).textContent='-');['d5','d6','d7','d8'].forEach(k=>$(k).textContent='')}
+    $('k5').textContent=eur(last.t);$('d5').innerHTML=last.y+per+(prev?' · '+dtxt(last.t,prev.t)+' vs '+prev.y:'');
+    $('k6').textContent=eur(last.sL);$('d6').innerHTML=last.y+(prev?' · '+dtxt(last.sL,prev.sL)+' vs '+prev.y:'');
+    $('k7').textContent=eur(last.sG);$('d7').innerHTML=last.y+(prev?' · '+dtxt(last.sG,prev.sG)+' vs '+prev.y:'');
+  }else{['k5','k6','k7'].forEach(k=>$(k).textContent='-');['d5','d6','d7'].forEach(k=>$(k).textContent='')}
+  if(D.length){const mx=D.reduce((m,d)=>d.t>m.t?d:m,D[0]);$('k8').textContent=mx.y;$('d8').textContent=eur(mx.t)+per}
+  else{$('k8').textContent='-';$('d8').textContent='nessun anno selezionato'}
 
   // stima fine anno
   const fL=forecast('L'),fG=forecast('G');
@@ -439,29 +464,29 @@ function renderC(){
   draw('c7',{type:'line',data:{labels:yl.map(String),datasets:[ln('Luce',CL,'y','uL'),ln('Gas',CG,'y1','uG')]},
     options:{...base,scales:dual('€/kWh','€/Smc',2),plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:x=>x.dataset.label+': '+nf(x.raw,3)+(x.dataset.yAxisID==='y'?' €/kWh':' €/Smc')}}}}});
 
-  // spesa cumulata (+ proiezione tratteggiata)
-  const ds8=yl.map(y=>{const l=Math.max(lastM(y,'L'),lastM(y,'G'));const aL=spM(y,'L'),aG=spM(y,'G');let run=0;const col=ycol(y,yl);
+  // spesa cumulata (+ proiezione tratteggiata se l'anno in corso è selezionato)
+  const ds8=yl.map(y=>{const l=Math.max(lastM(y,'L'),lastM(y,'G'));const aL=spM(y,'L'),aG=spM(y,'G');let run=0;const col=ycol(y);
     return {label:String(y),data:MESI.map((_,i)=>{if(i+1>l)return null;run+=aL[i]+aG[i];return r2(run)}),borderColor:col,backgroundColor:col,borderWidth:y==ly?3:1.5,pointRadius:y==ly?3:0,pointHoverRadius:4,tension:.2,order:y==ly?0:1}});
-  const lg8=yl.map(y=>[ycol(y,yl),String(y)]);
-  if(fOk(fL)&&fOk(fG)&&!(fL.done&&fG.done)){
+  const lg8=yl.map(y=>[ycol(y),String(y)]);
+  if(ly&&sel(ly)&&fOk(fL)&&fOk(fG)&&!(fL.done&&fG.done)){
     const aL=spM(ly,'L'),aG=spM(ly,'G'),m0=Math.max(Math.min(fL.lb,fG.lb),1);let run=0;
     const data=MESI.map((_,i)=>{const m=i+1;run+=(m<=fL.lb?aL[i]:fL.mon[i])+(m<=fG.lb?aG[i]:fG.mon[i]);return m>=m0?r2(run):null});
-    ds8.push({label:'Stima '+ly,data,borderColor:ycol(ly,yl),backgroundColor:ycol(ly,yl),borderDash:[6,4],borderWidth:2,pointRadius:0,pointHoverRadius:3,tension:.2,order:2});
-    lg8.push([ycol(ly,yl),'Stima '+ly+' (tratteggio)']);
+    ds8.push({label:'Stima '+ly,data,borderColor:ycol(ly),backgroundColor:ycol(ly),borderDash:[6,4],borderWidth:2,pointRadius:0,pointHoverRadius:3,tension:.2,order:2});
+    lg8.push([ycol(ly),'Stima '+ly+' (tratteggio)']);
   }
   $('lg8').innerHTML=lgHTML(lg8);
   draw('c8',{type:'line',data:{labels:MESI,datasets:ds8},
     options:{...base,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{filter:x=>x.raw!=null,itemSort:(a,b)=>(b.raw||0)-(a.raw||0),callbacks:{label:x=>x.dataset.label+': '+eur(x.raw)}}},scales:{x:{ticks:{color:ink},grid:{display:false}},y:{ticks:{color:ink,callback:v=>nf(v,0)+' €'},grid:{color:grid}}}}});
 
-  // tabella
+  // tabella (Δ sempre rispetto all'anno solare precedente, anche se nascosto)
   let h='<tr><th>Anno</th><th>Luce kWh</th><th>Δ</th><th>Gas Smc</th><th>Δ</th><th>Spesa luce</th><th>Spesa gas</th><th>Totale</th><th>Δ</th><th>€/kWh</th><th>€/Smc</th></tr>';
-  D.forEach((d,i)=>{const p=i&&D[i-1].y==d.y-1?D[i-1]:null;
+  D.forEach(d=>{const p=byY[d.y-1];
     h+='<tr><td><b>'+d.y+'</b></td><td>'+(d.cL?nf(d.cL,0):'-')+'</td><td>'+(p?dtxt(d.cL,p.cL):'')+'</td><td>'+(d.cG?nf(d.cG,0):'-')+'</td><td>'+(p?dtxt(d.cG,p.cG):'')+'</td><td>'+eur(d.sL)+'</td><td>'+eur(d.sG)+'</td><td><b>'+eur(d.t)+'</b></td><td>'+(p?dtxt(d.t,p.t):'')+'</td><td>'+(d.uL!=null?nf(d.uL,3):'-')+'</td><td>'+(d.uG!=null?nf(d.uG,3):'-')+'</td></tr>'});
-  $('tabC').innerHTML=D.length?h:'<tr><td style="color:var(--tx2)">Nessuna bolletta registrata.</td></tr>';
+  $('tabC').innerHTML=D.length?h:'<tr><td style="color:var(--tx2)">'+(Dall.length?'Nessun anno selezionato.':'Nessuna bolletta registrata.')+'</td></tr>';
 
   // mappa consumi
   $('hL').className='ib'+(HU==='L'?' on':'');$('hG').className='ib'+(HU==='G'?' on':'');
-  const yh=years().filter(y=>cSum(y,12,HU)>0);let mx=0;
+  const yh=years().filter(y=>sel(y)&&cSum(y,12,HU)>0);let mx=0;
   yh.forEach(y=>{for(let m=1;m<=12;m++)mx=Math.max(mx,cv(y,m,HU)||0)});
   const rgb=HU==='L'?'237,161,0':'42,120,214';
   let t='<tr><th>'+un(HU)+'</th>'+MESI.map(m=>'<th>'+m+'</th>').join('')+'<th style="text-align:right">Totale</th></tr>';
@@ -471,11 +496,11 @@ function renderC(){
       const al=mx?0.1+0.8*v/mx:0.1;
       t+='<td style="background:rgba('+rgb+','+al.toFixed(2)+');'+(al>0.55?'color:#fff':'')+'">'+nf(v,0)+'</td>'}
     t+='<td class="tt">'+nf(cSum(y,12,HU),0)+'</td></tr>'});
-  $('heat').innerHTML=yh.length?t:'<tr><td style="color:var(--tx2)">Nessun consumo registrato.</td></tr>';
+  $('heat').innerHTML=yh.length?t:'<tr><td style="color:var(--tx2)">Nessun consumo da mostrare per gli anni selezionati.</td></tr>';
 }
 
 function exportCSV(){
-  const up=curUp(),D=compData(up);
+  const up=curUp(),D=compData(up).filter(d=>sel(d.y));
   const f=(v,d)=>v==null||v===''?'':Number(v).toFixed(d).replace('.',',');
   const L=[['Anno','Periodo','Luce kWh','Gas Smc','Spesa luce €','Spesa gas €','Totale €','€/kWh','€/Smc'].join(';')];
   D.forEach(d=>L.push([d.y,pl(up),f(d.cL,0),f(d.cG,0),f(d.sL,2),f(d.sG,2),f(d.t,2),f(d.uL,4),f(d.uG,4)].join(';')));
