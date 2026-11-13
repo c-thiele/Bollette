@@ -6,6 +6,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="robots" content="noindex">
 <title>Bollette casa</title>
+ <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2a78d6">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-title" content="Bollette">
+<meta name="apple-mobile-web-app-status-bar-style" content="default"> 
 <style>
 :root{--bg:#f7f7f5;--card:#fff;--soft:#efeeea;--tx:#1b1b1a;--tx2:#5f5e5a;--bd:#dddcd5;--ac:#2a78d6;--ok:#2f7d32;--ko:#c62828}
 @media (prefers-color-scheme:dark){:root{--bg:#141413;--card:#1f1f1e;--soft:#2a2a28;--tx:#f0efec;--tx2:#b4b2a9;--bd:#3a3a37;--ac:#3987e5;--ok:#66bb6a;--ko:#ef5350}}
@@ -593,5 +598,6 @@ function importFile(inp){
   else showLogin();
 })();
 </script>
+  <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{})</script>
 </body>
 </html>
